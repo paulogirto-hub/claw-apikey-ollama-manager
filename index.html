@@ -18,6 +18,13 @@
     .hero-title { font-size: 40px; font-weight: 700; color: #f0f6fc; margin-bottom: 12px; }
     .hero-sub { font-size: 18px; color: #8b949e; max-width: 480px; margin: 0 auto; }
 
+    /* Screenshots */
+    .screenshots { margin: 40px 0; text-align: center; }
+    .screenshots img { max-width: 100%; border-radius: 12px; border: 1px solid #30363d; margin: 12px 0; }
+    .screenshots-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 600px) { .screenshots-grid { grid-template-columns: 1fr; } }
+    .screenshot-cap { font-size: 12px; color: #484f58; margin-top: 6px; }
+
     /* Divider */
     .divider { border: none; border-top: 1px solid #21262d; margin: 48px 0; }
 
@@ -140,6 +147,24 @@
 │  │    auth-profiles (OpenClaw)    │ │
 │  └────────────────────────────────┘ │
 └─────────────────────────────────────┘</pre>
+  </section>
+
+
+  <section class="section screenshots">
+    <h2 class="section-title">Screenshots</h2>
+    <div class="screenshots-grid">
+      <div>
+        <img src="https://i.imgur.com/MKpSGSn.png" alt="Tela de login" loading="lazy">
+        <p class="screenshot-cap">Tela de login — admin + senha</p>
+      </div>
+      <div>
+        <img src="https://i.imgur.com/yXsHD9q.png" alt="Painel principal" loading="lazy">
+        <p class="screenshot-cap">Painel com status das keys</p>
+      </div>
+    </div>
+    <p style="font-size:13px;color:#484f58;margin-top:16px;">
+      Veja ao vivo: <a href="https://clawpanel.haasgrow.cloud/" style="color:#58a6ff;">https://clawpanel.haasgrow.cloud</a> — login: admin / Orquestrador@2026
+    </p>
   </section>
 
   <section class="cta">
