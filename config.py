@@ -11,6 +11,7 @@ PANEL_PASSWORD = "Orquestrador@2026"
 HEALTH_CHECK_INTERVAL = 300  # 5 minutos
 FAIL_THRESHOLD = 3
 FALLBACK_COOLDOWN = 300
+TEST_COOLDOWN = 60  # segundos entre testes pra evitar banimento
 WHATSAPP_API = "http://localhost:18789"
 WHATSAPP_TARGET = "+55XXXXXXXXX"
 SESSION_COOKIE = "claw_session"

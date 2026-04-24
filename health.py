@@ -1,6 +1,6 @@
 import urllib.request, urllib.error, time, threading, json, subprocess, os
 from datetime import datetime, timezone
-from config import AUTH_FILE, OPENCLAW_FILE, MODEL, WHATSAPP_API, WHATSAPP_TARGET, FAIL_THRESHOLD, FALLBACK_COOLDOWN, HEALTH_CHECK_INTERVAL
+from config import AUTH_FILE, OPENCLAW_FILE, MODEL, WHATSAPP_API, WHATSAPP_TARGET, FAIL_THRESHOLD, FALLBACK_COOLDOWN, HEALTH_CHECK_INTERVAL, TEST_COOLDOWN
 from db import db_get_active_key, db_set_active, db_update_key_status, db_log_fallback, db_list_keys, db_get_config, db_set_config, db_get_next_alive_key, db_get_key_name, get_db
 
 _health_thread = None
@@ -186,6 +186,18 @@ def run_health_check_only():
     from db import db_list_keys, db_update_key_status, db_set_config
     from datetime import datetime
 
+    # Verifica cooldown de teste pra evitar banimento
+    last_test = db_get_config("last_test_at")
+    if last_test:
+        try:
+            last_ts = datetime.fromisoformat(last_test).timestamp()
+            if time.time() - last_ts < TEST_COOLDOWN:
+                remaining = int(TEST_COOLDOWN - (time.time() - last_ts))
+                print(f"[TEST] Cooldown ativo, faltam {remaining}s")
+                return {}
+        except:
+            pass
+
     keys = db_list_keys()
     results = {}
 
@@ -204,6 +216,7 @@ def run_health_check_only():
         results[key_id] = {"ok": ok, "latency": latency, "error": err}
 
     db_set_config("last_full_check", datetime.now(timezone.utc).isoformat())
+    db_set_config("last_test_at", datetime.now(timezone.utc).isoformat())
     return results
 
 def start_health_thread():
