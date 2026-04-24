@@ -11,7 +11,7 @@ def test_key_via_api(key):
     """Testa uma key contra a API do Ollama SEM modelo fixo (prompt mínimo genérico).
     Retorna (ok, latency_ms, error_msg)."""
     url = "https://ollama.com/api/generate"
-    payload = json.dumps({"prompt": "hi", "options": {"num_predict": 3}}).encode()
+    payload = json.dumps({"model": "minimax-m2.7:cloud", "prompt": "hi", "options": {"num_predict": 3}}).encode()
     try:
         req = urllib.request.Request(url, data=payload,
                              headers={"Content-Type": "application/json",
