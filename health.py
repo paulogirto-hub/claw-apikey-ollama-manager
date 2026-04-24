@@ -8,7 +8,7 @@ _stop_health_thread = False
 _HC_INTERVAL = HEALTH_CHECK_INTERVAL
 
 def test_key_via_api(key):
-    """Testa uma key contra a API do Ollama SEM modelo fixo (prompt mínimo genérico).
+    """Testa uma key contra a API do Ollama com modelo configurado.
     Retorna (ok, latency_ms, error_msg)."""
     url = "https://ollama.com/api/generate"
     payload = json.dumps({"model": "minimax-m2.7:cloud", "prompt": "hi", "options": {"num_predict": 3}}).encode()
@@ -18,16 +18,16 @@ def test_key_via_api(key):
                                       "Authorization": f"Bearer {key}"}, method="POST")
         start = time.time()
         with urllib.request.urlopen(req, timeout=15) as resp:
-            latency = int((time.time() - start) * 1000)
-            # Streaming response — ler só a primeira linha JSON
             first_line = resp.readline()
             data = json.loads(first_line)
-            ok = resp.status == 200 and data.get("response", "").strip()
+            latency = (time.time() - start) * 1000
+            ok = resp.status == 200 and (data.get("response", "").strip() or data.get("thinking", "").strip())
             return (ok, latency, None)
     except urllib.error.HTTPError as e:
         err = f"HTTP {e.code}"
         try:
-            err = f"HTTP {e.code} {e.read().decode()[:50]}"
+            err_body = e.read().decode()[:100]
+            err = f"HTTP {e.code} {err_body}"
         except:
             pass
         return (False, 0, err)
@@ -41,64 +41,9 @@ def test_key_health(key_id_or_key):
         keys = db_list_keys()
         for k in keys:
             if k["id"] == key_id_or_key:
-                ok, latency, err = test_key_via_api(k["key"])
-                db_update_key_status(k["id"], is_alive=1 if ok else 0,
-                                     consecutive_fails=0 if ok else k.get("consecutive_fails", 0) + 1,
-                                     last_error=err, latency_ms=latency if ok else None)
-                return ok, latency, err
-        return False, 0, "Key não encontrada"
-    else:
-        return test_key_via_api(key_id_or_key)
-
-def send_whatsapp_alert(message):
-    """Envia alerta via WhatsApp (opcional)."""
-    try:
-        data = json.dumps({"number": WHATSAPP_TARGET, "message": message}).encode()
-        req = urllib.request.Request(WHATSAPP_API + "/send", data=data,
-                                     headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=5):
-            pass
-    except:
-        pass
-
-def run_health_check():
-    """Executa health check em todas as keys. Retorna (fallback_triggered, next_key_id)."""
-    global _HC_INTERVAL
-    from db import db_list_keys, db_get_active_key, db_update_key_status, db_set_config
-    from datetime import datetime
-
-    keys = db_list_keys()
-    active_key_id, active_key = db_get_active_key()
-    fallback_triggered = False
-    next_key_id = None
-
-    # Atualiza intervalo da config se mudou
-    saved_interval = db_get_config("health_check_interval")
-    if saved_interval:
-        _HC_INTERVAL = int(saved_interval)
-
-    for ks in keys:
-        key_id = ks["id"]
-        ok, latency, err = test_key_via_api(ks["key"])
-        if ok:
-            db_update_key_status(key_id, is_alive=1, consecutive_fails=0, last_error=None, latency_ms=latency)
-        else:
-            # HTTP 404 = modelo não suportado, não marca key como morta
-            is_404 = isinstance(err, str) and err.startswith("HTTP 404")
-            fails = ks.get("consecutive_fails", 0) + (0 if is_404 else 1)
-            db_update_key_status(key_id, is_alive=0,
-                                 consecutive_fails=fails if not is_404 else ks.get("consecutive_fails", 0),
-                                 last_error=err)
-            if key_id == active_key_id and not is_404 and fails >= FAIL_THRESHOLD and not fallback_triggered:
-                fallback_triggered = True
-
-    # Se key ativa falhou, achar próxima viva
-    if fallback_triggered and active_key_id:
-        next_id, next_key = db_get_next_alive_key(active_key_id)
-        next_key_id = next_id
-
-    db_set_config("last_full_check", datetime.now(timezone.utc).isoformat())
-    return fallback_triggered, next_key_id
+                return test_key_via_api(k["key"])
+        return (False, 0, "Key not found")
+    return test_key_via_api(key_id_or_key)
 
 def find_next_alive_key(current_key_id):
     """Acha próxima key viva (testa antes de retornar)."""
@@ -138,14 +83,12 @@ def do_fallback(new_key_id, reason="manual"):
         nid, nk = find_next_alive_key(new_key_id)
         if nid:
             new_key_id = nid
-            new_key = nk
-            test_ok, latency, err = test_key_via_api(new_key)
-        if not test_ok:
+            test_ok = True
+        else:
             print("[FALLBACK] Nenhuma key viva disponível")
             return
 
     active_key_id, _ = db_get_active_key()
-    # Salva histórico da principal se foi automático
     if reason == "auto" and active_key_id:
         conn = get_db()
         try:
@@ -168,60 +111,118 @@ def write_auth_profiles_from_db():
     from config import AUTH_FILE, MODEL
     from db import db_get_active_key
     active_key_id, active_key = db_get_active_key()
-    profiles = {}
-    if active_key_id and active_key:
-        profiles[active_key_id] = {"type": "api_key", "provider": "ollama", "key": active_key}
-    os.makedirs(os.path.dirname(AUTH_FILE), exist_ok=True)
+    try:
+        with open(AUTH_FILE) as f:
+            auth = json.load(f)
+    except:
+        auth = {"profiles": {}}
+    for profile_id, profile_data in auth.get("profiles", {}).items():
+        if profile_data.get("type") == "api_key" and profile_data.get("provider") == "ollama":
+            profile_data["key"] = active_key
     with open(AUTH_FILE, "w") as f:
-        json.dump(profiles, f, indent=2)
+        json.dump(auth, f, indent=2)
 
 def write_openclaw_defaults():
     """Escreve openclaw.json com o modelo default."""
-    from config import OPENCLAW_FILE, MODEL
     data = {"model": MODEL}
-    os.makedirs(os.path.dirname(OPENCLAW_FILE), exist_ok=True)
+    try:
+        with open(OPENCLAW_FILE) as f:
+            existing = json.load(f)
+            existing.update(data)
+            data = existing
+    except:
+        pass
     with open(OPENCLAW_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
 def restart_gateway():
-    """Restart no gateway via systemctl."""
+    """Restart openclaw gateway."""
     try:
-        subprocess.run(["systemctl", "restart", "openclaw"], check=True)
-        print("[GATEWAY] Restart via systemctl")
+        subprocess.run(["openclaw", "gateway", "restart"], capture_output=True, timeout=30)
+        print("[RESTART] Gateway restartado")
     except Exception as e:
-        print(f"[GATEWAY] systemctl falhou: {e}")
-        try:
-            subprocess.run(["openclaw", "gateway", "restart"], check=True)
-            print("[GATEWAY] Restart via openclaw cli")
-        except Exception as e2:
-            print(f"[GATEWAY] openclaw cli também falhou: {e2}")
+        print(f"[RESTART] Erro: {e}")
 
-def health_check_loop():
-    """Thread loop de health check."""
-    global _stop_health_thread, _HC_INTERVAL
-    while not _stop_health_thread:
-        try:
-            fallback_triggered, next_key_id = run_health_check()
-            if fallback_triggered and next_key_id:
-                from_name = db_get_key_name(db_get_active_key()[0]) or db_get_active_key()[0]
-                to_name = db_get_key_name(next_key_id) or next_key_id
-                do_fallback(next_key_id, reason="auto")
-                send_whatsapp_alert(f"🔄 Fallback: key {from_name} morreu, trocou para {to_name}")
-        except Exception as e:
-            print(f"[HEALTH] Erro no health check: {e}")
-        finally:
-            for _ in range(_HC_INTERVAL):
-                if _stop_health_thread:
-                    break
-                time.sleep(1)
+def run_health_check():
+    """Executa health check em todas as keys. Retorna (fallback_triggered, next_key_id)."""
+    global _HC_INTERVAL
+    from db import db_list_keys, db_get_active_key, db_update_key_status, db_set_config
+    from datetime import datetime
+
+    keys = db_list_keys()
+    active_key_id, active_key = db_get_active_key()
+    fallback_triggered = False
+    next_key_id = None
+
+    saved_interval = db_get_config("health_check_interval")
+    if saved_interval:
+        _HC_INTERVAL = int(saved_interval)
+
+    for ks in keys:
+        key_id = ks["id"]
+        ok, latency, err = test_key_via_api(ks["key"])
+        if ok:
+            db_update_key_status(key_id, is_alive=1, consecutive_fails=0, last_error=None, latency_ms=latency)
+        else:
+            is_404 = isinstance(err, str) and err.startswith("HTTP 404")
+            if not is_404:
+                fails = (ks.get("consecutive_fails") or 0) + 1
+                db_update_key_status(key_id, is_alive=0, consecutive_fails=fails, last_error=err)
+                if key_id == active_key_id and fails >= FAIL_THRESHOLD and not fallback_triggered:
+                    fallback_triggered = True
+            else:
+                db_update_key_status(key_id, is_alive=0, last_error=err)
+
+    if fallback_triggered and active_key_id:
+        next_id, next_key = db_get_next_alive_key(active_key_id)
+        next_key_id = next_id
+
+    db_set_config("last_full_check", datetime.now(timezone.utc).isoformat())
+    return fallback_triggered, next_key_id
+
+def run_health_check_only():
+    """Executa health check em todas as keys SEM disparar fallback.
+    Retorna dict com resultados de cada key."""
+    from db import db_list_keys, db_update_key_status, db_set_config
+    from datetime import datetime
+
+    keys = db_list_keys()
+    results = {}
+
+    for ks in keys:
+        key_id = ks["id"]
+        ok, latency, err = test_key_via_api(ks["key"])
+        if ok:
+            db_update_key_status(key_id, is_alive=1, consecutive_fails=0, last_error=None, latency_ms=latency)
+        else:
+            is_404 = isinstance(err, str) and err.startswith("HTTP 404")
+            if not is_404:
+                fails = (ks.get("consecutive_fails") or 0) + 1
+                db_update_key_status(key_id, is_alive=0, consecutive_fails=fails, last_error=err)
+            else:
+                db_update_key_status(key_id, is_alive=0, last_error=err)
+        results[key_id] = {"ok": ok, "latency": latency, "error": err}
+
+    db_set_config("last_full_check", datetime.now(timezone.utc).isoformat())
+    return results
 
 def start_health_thread():
-    """Inicia thread de health check em background."""
-    global _health_thread, _stop_health_thread, _HC_INTERVAL
+    global _health_thread, _stop_health_thread
+    if _health_thread and _health_thread.is_alive():
+        return
     _stop_health_thread = False
-    saved = db_get_config("health_check_interval")
-    if saved:
-        _HC_INTERVAL = int(saved)
-    _health_thread = threading.Thread(target=health_check_loop, daemon=True)
+    def loop():
+        while not _stop_health_thread:
+            try:
+                fb_triggered, next_id = run_health_check()
+                if fb_triggered and next_id:
+                    do_fallback(next_id, reason="auto")
+            except Exception as e:
+                print(f"[HEALTH] Erro: {e}")
+            time.sleep(_HC_INTERVAL)
+    _health_thread = threading.Thread(target=loop, daemon=True)
     _health_thread.start()
-    print("[APP] Health check thread iniciado")
+
+def stop_health_thread():
+    global _stop_health_thread
+    _stop_health_thread = True

@@ -17,7 +17,7 @@ from db import (init_db, db_add_key, db_list_keys, db_get_active_key, db_set_act
                 db_get_fallback_log, db_get_last_fallback, db_set_config)
 from health import (start_health_thread, do_fallback, run_health_check,
                     test_key_health, write_auth_profiles_from_db, write_openclaw_defaults,
-                    restart_gateway, find_next_alive_key, _HC_INTERVAL)
+                    restart_gateway, find_next_alive_key, _HC_INTERVAL, run_health_check_only)
 from auth import validate_session, render_login_page, SESSIONS, generate_session_token, SESSION_COOKIE, SESSION_TTL
 from templates import render_page, _MODAL_HTML
 
@@ -136,8 +136,8 @@ def api_keys_action():
 @app.route("/api/health_check", methods=["POST"])
 def api_health_check():
     if not validate_session(request): return jsonify({"error": "Unauthorized"}), 401
-    fallback_triggered, next_key_id = run_health_check()
-    return jsonify({"ok": True, "fallback_triggered": fallback_triggered, "next_key_id": next_key_id})
+    results = run_health_check_only()
+    return jsonify({"ok": True, "results": results})
 
 @app.route("/api/fallback", methods=["POST"])
 def api_fallback():
