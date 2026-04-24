@@ -21,7 +21,7 @@ def test_key_via_api(key):
             first_line = resp.readline()
             data = json.loads(first_line)
             latency = (time.time() - start) * 1000
-            ok = resp.status == 200 and (data.get("response", "").strip() or data.get("thinking", "").strip())
+            ok = resp.status == 200 and bool(data.get("response", "").strip() or data.get("thinking", "").strip())
             return (ok, latency, None)
     except urllib.error.HTTPError as e:
         err = f"HTTP {e.code}"
