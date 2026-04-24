@@ -1,6 +1,6 @@
 # 🦜 Claw Key Manager
 
-Painel Flask para gerenciar API keys do Ollama com **health check automático**, **fallback inteligente** e **SQLite como fonte de verdade**.
+Painel Flask para gerenciar API keys de múltiplos provedores de IA com **health check automático**, **fallback inteligente** e **SQLite como fonte de verdade**.
 
 ---
 
@@ -21,10 +21,11 @@ O Claw Key Manager monitora todas as suas keys, detecta quando uma morre, e faz 
 - 🗄️ **SQLite como Source of Truth** — banco local leve, sem dependências externas
 - 🌐 **Interface Web** — painel moderno com status em tempo real
 - ⏱️ **Cooldown Anti-Spam** — não troca de key mais que uma vez a cada 5 min
-- 🧪 **Teste Manual** — teste keys individuais com um clique
+- 🧪 **Teste Manual** — teste keys individuais com um clique (com cooldown anti-ban)
 - 📥 **Import/Export JSON** — exporte suas keys, importe quando precisar
 - 🐌 **Detecção de Keys Lentas** — marca keys com latência > 3s
 - 📊 **Histórico de Fallbacks** — registro de todas as trocas de key
+- 📱 **Notificação WhatsApp** — avisa quando fallback dispara (via gateway)
 
 ---
 
@@ -33,6 +34,17 @@ O Claw Key Manager monitora todas as suas keys, detecta quando uma morre, e faz 
 ```
 Flask  ·  SQLite  ·  Python 3  ·  Docker Swarm  ·  Traefik
 ```
+
+---
+
+## Provedores Suportados
+
+| Provedor | Endpoint | Modelos |
+|----------|----------|---------|
+| **Ollama** | `https://ollama.com/api/generate` | Qualquer modelo Ollama |
+| **OpenAI** | `https://api.openai.com/v1/chat/completions` | gpt-4, gpt-3.5-turbo, etc |
+| **OpenRouter** | `https://openrouter.ai/api/v1/chat/completions` | Qualquer modelo da OpenRouter |
+| **Groq** | `https://api.groq.com/openai/v1/chat/completions` | llama, mixtral, gemma |
 
 ---
 
@@ -55,7 +67,8 @@ PORT = 20130                         # Porta do servidor
 HEALTH_CHECK_INTERVAL = 300          # Intervalo em segundos (default: 5 min)
 FAIL_THRESHOLD = 3                   # Falhas antes de acionar fallback
 FALLBACK_COOLDOWN = 300              # Cooldown entre fallbacks em segundos
-MODEL = "minimax-m2.7:cloud"         # Modelo para health check
+TEST_COOLDOWN = 60                   # Cooldown entre testes manuais (anti-ban)
+MODEL = "minimax-m2.7:cloud"         # Modelo para health check (Ollama)
 ```
 
 ### 3. Execute
@@ -112,7 +125,7 @@ O `traefik.yaml` já vem configurado com:
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| POST | `/api/health_check` | Força health check |
+| POST | `/api/health_check` | Força health check (sem fallback) |
 | POST | `/api/fallback` | Força fallback manual |
 | GET | `/api/fallback_log` | Histórico de trocas |
 | POST | `/api/restart_gateway` | Reinicia OpenClaw |
@@ -139,6 +152,26 @@ claw-key-manager/
 ## Landing Page
 
 Página pública disponível em `/lp` — sem necessidade de login. Ideal pra compartilhar o projeto.
+
+---
+
+## Roadmap
+
+### Fase 1 — Infraestrutura (próxima)
+- [ ] Adicionar campo `provider` na tabela keys (`ollama` | `openai` | `openrouter` | `groq`)
+- [ ] Adapter layer: `ProviderAdapter` com método `test_key(api_key, model)` e `call(api_key, prompt)`
+- [ ] Health check genérico que usa o adapter correto por provider
+- [ ] API call genérica no fallback
+
+### Fase 2 — UX
+- [ ] Import simples: cola key direto, sem JSON
+- [ ] Detectar modelos disponíveis por key (GET /models ou similar)
+- [ ] Notificação WhatsApp quando fallback dispara
+
+### Fase 3 — Polish
+- [ ] Dashboard com gráfico de uso
+- [ ] Limpeza de keys mortas em massa
+- [ ] UI para selecionar provider/model ao adicionar key
 
 ---
 
