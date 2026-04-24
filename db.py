@@ -78,8 +78,8 @@ def db_update_key_status(key_id, is_alive=None, consecutive_fails=None, last_err
             conn.execute("UPDATE keys SET is_alive=?, last_tested=? WHERE id=?", (is_alive, now, key_id))
         if consecutive_fails is not None:
             conn.execute("UPDATE keys SET consecutive_fails=? WHERE id=?", (consecutive_fails, key_id))
-        if last_error is not None:
-            conn.execute("UPDATE keys SET last_error=? WHERE id=?", (last_error, key_id))
+        # Sempre atualiza last_error (pode ser vazio pra limpar)
+        conn.execute("UPDATE keys SET last_error=? WHERE id=?", (last_error or "", key_id))
         if latency_ms is not None:
             conn.execute("UPDATE keys SET latency_ms=? WHERE id=?", (latency_ms, key_id))
         conn.commit()
