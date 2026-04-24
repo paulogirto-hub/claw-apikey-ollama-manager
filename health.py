@@ -8,10 +8,10 @@ _stop_health_thread = False
 _HC_INTERVAL = HEALTH_CHECK_INTERVAL
 
 def test_key_via_api(key):
-    """Testa uma key contra a API do Ollama. Retorna (ok, latency_ms, error_msg)."""
+    """Testa uma key contra a API do Ollama SEM modelo fixo (prompt mínimo genérico).
+    Retorna (ok, latency_ms, error_msg)."""
     url = "https://ollama.com/api/generate"
-    model = db_get_config("model") or MODEL
-    payload = json.dumps({"model": model, "prompt": "hi", "options": {"num_predict": 3}}).encode()
+    payload = json.dumps({"prompt": "hi", "options": {"num_predict": 3}}).encode()
     try:
         req = urllib.request.Request(url, data=payload,
                              headers={"Content-Type": "application/json",
@@ -83,9 +83,13 @@ def run_health_check():
         if ok:
             db_update_key_status(key_id, is_alive=1, consecutive_fails=0, last_error=None, latency_ms=latency)
         else:
-            fails = ks.get("consecutive_fails", 0) + 1
-            db_update_key_status(key_id, is_alive=0, consecutive_fails=fails, last_error=err)
-            if key_id == active_key_id and fails >= FAIL_THRESHOLD and not fallback_triggered:
+            # HTTP 404 = modelo não suportado, não marca key como morta
+            is_404 = isinstance(err, str) and err.startswith("HTTP 404")
+            fails = ks.get("consecutive_fails", 0) + (0 if is_404 else 1)
+            db_update_key_status(key_id, is_alive=0,
+                                 consecutive_fails=fails if not is_404 else ks.get("consecutive_fails", 0),
+                                 last_error=err)
+            if key_id == active_key_id and not is_404 and fails >= FAIL_THRESHOLD and not fallback_triggered:
                 fallback_triggered = True
 
     # Se key ativa falhou, achar próxima viva
@@ -134,8 +138,9 @@ def do_fallback(new_key_id, reason="manual"):
         nid, nk = find_next_alive_key(new_key_id)
         if nid:
             new_key_id = nid
-            test_ok = True
-        else:
+            new_key = nk
+            test_ok, latency, err = test_key_via_api(new_key)
+        if not test_ok:
             print("[FALLBACK] Nenhuma key viva disponível")
             return
 

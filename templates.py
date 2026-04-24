@@ -120,7 +120,7 @@ def render_page(req):
     else:
         fb_log_html = '<div class="empty" style="padding:12px">Nenhum fallback registrado.</div>'
 
-    alive_count = sum(1 for k in keys if k["is_alive"] and k["consecutive_fails"] == 0)
+    alive_count = sum(1 for k in keys if k["is_alive"])
     alive_class = "status-good" if alive_count >= 3 else "status-warn"
 
     html = f"""<!DOCTYPE html>
