@@ -1,0 +1,28 @@
+version: "3.8"
+services:
+  files-bot:
+    image: python:3.11-slim
+    working_dir: /root
+    command: sh -c "pip install flask requests -q && python3 /root/file_bot.py"
+    volumes:
+      - /root/files_manager/bot:/root
+      - /root/files_storage:/root/files_storage
+    networks:
+      - haasgrow
+    environment:
+      - BOT_TOKEN=8674753840:AAG6eYfogasjqgOsS0UyXPxwXODSMPVRuNg
+      - BASE_URL=https://clawpanel.haasgrow.cloud
+      - STORAGE_DIR=/root/files_storage
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.filesbot.rule=PathPrefix(`/8674753840`)"
+      - "traefik.http.routers.filesbot.tls=true"
+      - "traefik.http.routers.filesbot.entrypoints=websecure"
+      - "traefik.http.services.filesbot.loadbalancer.server.port=20131"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+networks:
+  haasgrow:
+    external: true

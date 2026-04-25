@@ -1,0 +1,44 @@
+import os
+
+# ============== CONFIGURAÇÃO ==============
+# Copie este arquivo para config.py e preencha com seus valores
+
+APP_DIR = os.path.expanduser("~/.openclaw/agents/main/agent")
+
+# Arquivos de dados (NÃO commitar config.py com dados reais!)
+AUTH_FILE = os.path.join(APP_DIR, "auth-profiles.json")
+OPENCLAW_FILE = os.path.join(APP_DIR, "openclaw.json")
+KEYS_STATUS_FILE = os.path.join(APP_DIR, "keys_status.json")
+DB_FILE = os.path.join(APP_DIR, "panel_keys.db")
+
+# Modelo padrão pra health check
+MODEL = "ollama/minimax-m2.7:cloud"
+
+# Porta do servidor
+PORT = 20130
+
+# Senha do painel (MUDE ESTA!)
+PANEL_PASSWORD = "SUA_SENHA_AQUI"
+
+# Intervalo de health check em segundos
+HEALTH_CHECK_INTERVAL = 300  # 5 minutos
+
+# Quantidade de falhas antes de marcar como dead
+FAIL_THRESHOLD = 3
+
+# Cooldown em segundos após fallback
+FALLBACK_COOLDOWN = 300
+
+# Cooldown entre testes manuais (evita ban)
+TEST_COOLDOWN = 60
+
+# WhatsApp (opcional)
+WHATSAPP_API = "http://localhost:18789"
+WHATSAPP_TARGET = "+55XXXXXXXXX"
+
+# Sessão
+SESSION_COOKIE = "claw_session"
+SESSION_TTL = 86400  # 24 horas
+
+# Chave secreta pra sessões (mude para string aleatória!)
+SECRET_KEY = "MUDE_PARA_STRING_ALEATORIA_32_CHARS"

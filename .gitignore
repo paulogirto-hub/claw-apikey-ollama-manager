@@ -1,0 +1,36 @@
+# Environment
+.env
+*.env.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.pytest_cache/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / Keys
+*.pem
+*.key
+ssl/
+crets/
+
+# Docker
+.docker/
+
+# Temporary
+tmp/
+temp/
+*.bak

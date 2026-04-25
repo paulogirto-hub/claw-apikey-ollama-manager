@@ -1,186 +1,208 @@
-# 🦜 Claw Key Manager
+# 🦜 Claw Panel
 
+Conjunto de serviços para gerenciar API keys e arquivos via Telegram + Web.
+
+---
+
+## 📦 Serviços
+
+### 1. 🦜 Claw Key Manager (`/key`)
 Painel Flask para gerenciar API keys de múltiplos provedores de IA com **health check automático**, **fallback inteligente** e **SQLite como fonte de verdade**.
 
----
-
-## Problema
-
-API keys de provedores de IA expiram, atingem quota, ou param de responder no meio de uma conversa. Trocar manualmente é chato e quebra o fluxo.
-
-## Solução
-
-O Claw Key Manager monitora todas as suas keys, detecta quando uma morre, e faz o **fallback automático** pra próxima — sem você precisar fazer nada.
-
----
-
-## Funcionalidades
-
-- 💚 **Health Check Automático** — testa todas as keys em intervalos de 1/2/5/10 min
-- 🔄 **Fallback Inteligente** — ativa próxima key viva quando a principal morre
-- 🗄️ **SQLite como Source of Truth** — banco local leve, sem dependências externas
-- 🌐 **Interface Web** — painel moderno com status em tempo real
-- ⏱️ **Cooldown Anti-Spam** — não troca de key mais que uma vez a cada 5 min
-- 🧪 **Teste Manual** — teste keys individuais com um clique (com cooldown anti-ban)
-- 📥 **Import/Export JSON** — exporte suas keys, importe quando precisar
-- 🐌 **Detecção de Keys Lentas** — marca keys com latência > 3s
-- 📊 **Histórico de Fallbacks** — registro de todas as trocas de key
-- 📱 **Notificação WhatsApp** — avisa quando fallback dispara (via gateway)
+**Funcionalidades:**
+- 💚 Health check automático
+- 🔄 Fallback inteligente
+- 🌐 Interface web moderna
+- ⏱️ Cooldown anti-spam
+- 🧪 Teste manual de keys
+- 📥 Import/Export JSON
+- 🐌 Detecção de keys lentas
+- 📱 Notificação WhatsApp (gateway)
 
 ---
 
-## Stack
+### 2. 📁 Files Manager (`/files`)
+Bot Flask de armazenamento de arquivos via Telegram com interface web para upload, download e **gestão de pastas**.
 
-```
-Flask  ·  SQLite  ·  Python 3  ·  Docker Swarm  ·  Traefik
-```
-
----
-
-## Provedores Suportados
-
-| Provedor | Endpoint | Modelos |
-|----------|----------|---------|
-| **Ollama** | `https://ollama.com/api/generate` | Qualquer modelo Ollama |
-| **OpenAI** | `https://api.openai.com/v1/chat/completions` | gpt-4, gpt-3.5-turbo, etc |
-| **OpenRouter** | `https://openrouter.ai/api/v1/chat/completions` | Qualquer modelo da OpenRouter |
-| **Groq** | `https://api.groq.com/openai/v1/chat/completions` | llama, mixtral, gemma |
+**Funcionalidades:**
+- 📤 Upload de arquivos (até 20MB)
+- 🔗 Download via link `/f/<token>`
+- 📁 Pastas e sub-pastas
+- ✏️ Renomear arquivos
+- 🗑️ Deletar arquivos
+- 📁 Mover arquivos entre pastas
+- 🌐 Interface web responsiva
+- 📱 Bot Telegram integrado
 
 ---
 
-## Instalação
+## 🚀 Quick Start
 
-### 1. Clone o repo
+### Pré-requisitos
+- Docker + Docker Swarm
+- Traefik (ou NGINX) como proxy reverso
+- Python 3.11+ (desenvolvimento)
 
+### 1. Clone o repositório
 ```bash
 git clone https://github.com/paulogirto-hub/claw-apikey-ollama-manager.git
 cd claw-apikey-ollama-manager
 ```
 
-### 2. Configuração
-
-Edite `config.py` com suas configurações:
-
-```python
-PANEL_PASSWORD = "sua_senha_aqui"    # Senha do painel web
-PORT = 20130                         # Porta do servidor
-HEALTH_CHECK_INTERVAL = 300          # Intervalo em segundos (default: 5 min)
-FAIL_THRESHOLD = 3                   # Falhas antes de acionar fallback
-FALLBACK_COOLDOWN = 300              # Cooldown entre fallbacks em segundos
-TEST_COOLDOWN = 60                   # Cooldown entre testes manuais (anti-ban)
-MODEL = "minimax-m2.7:cloud"         # Modelo para health check (Ollama)
+### 2. Configure
+```bash
+cp config.py.example config.py
+# Edite config.py com suas credenciais
 ```
 
-### 3. Execute
+### 3. Suba com Docker
+```bash
+# Key Manager
+docker compose up -d
+
+# Files Manager
+cd files_manager
+docker compose up -d
+```
+
+### 4. Acesse
+- Key Manager: `http://localhost:20130/`
+- Files Manager: `http://localhost:20131/files`
+
+---
+
+## 🔑 Key Manager — Configuração
+
+### Variáveis de Ambiente (config.py)
+
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `PANEL_PASSWORD` | Senha do painel | `SUA_SENHA` |
+| `MODEL` | Modelo pra health check | `ollama/minimax-m2.7:cloud` |
+| `PORT` | Porta do servidor | `20130` |
+| `HEALTH_CHECK_INTERVAL` | Intervalo de check (seg) | `300` |
+| `FAIL_THRESHOLD` | Falhas antes de marcar dead | `3` |
+| `FALLBACK_COOLDOWN` | Cooldown após fallback (seg) | `300` |
+| `TEST_COOLDOWN` | Cooldown entre testes manuais | `60` |
+| `SECRET_KEY` | Chave para sessões (gere aleatória!) | `MUDE_AQUI` |
+
+### Health Check
+- Testa todas as keys ativas automaticamente
+- Marca como `dead` após `FAIL_THRESHOLD` falhas consecutivas
+- Fallback automático para próxima key viva
+- Detecta keys lentas (>3s de latência)
+
+### Telegram Integration
+O bot responde aos comandos:
+- `/start` — mensagem inicial
+- `/keys` — lista todas as keys com status
+- `/add <nome> <key>` — adiciona nova key
+- `/delete <nome>` — remove key
+- `/test <nome>` — testa key específica
+- `/export` — exporta JSON com todas as keys
+
+---
+
+## 📁 Files Manager — API
+
+### Endpoints
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| `GET` | `/files` | Interface web |
+| `GET` | `/f/<token>` | Download arquivo |
+| `GET` | `/files/api/list` | Lista arquivos |
+| `GET` | `/files/api/folders` | Lista pastas |
+| `POST` | `/files/api/upload` | Upload arquivo |
+| `POST` | `/files/api/folders` | Criar pasta |
+| `POST` | `/files/api/files/<token>/move` | Mover arquivo |
+| `POST` | `/files/api/files/<token>/rename` | Renomear |
+| `DELETE` | `/files/api/files/<token>` | Deletar arquivo |
+| `DELETE` | `/files/api/folders/<id>` | Deletar pasta |
+
+### Estrutura de Pastas
+- Pasta raiz: `parent_id = NULL`
+- Sub-pastas: `parent_id = <id_da_pai>`
+- Arquivos: `folder = '/'` (raiz) ou `folder = <id_da_pasta>`
+
+### Docker Labels (Traefik)
+```
+traefik.http.routers.filesbot.rule=Host(`seu-dominio.com`) && PathPrefix(`/files`)
+traefik.http.routers.filesbot.service=filesbot
+traefik.http.routers.filesbot.entrypoints=websecure
+traefik.http.routers.filesbot.tls=true
+traefik.http.services.filesbot.loadbalancer.server.port=20131
+```
+
+---
+
+## 🏗️ Arquitetura
+
+```
+                    ┌─────────────┐
+                    │   Traefik   │
+                    │ (proxy web) │
+                    └──────┬──────┘
+                           │
+            ┌──────────────┼──────────────┐
+            │              │              │
+      ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐
+      │ Key Mgr   │  │ Files Mgr │  │  NGINX    │
+      │ :20130    │  │ :20131    │  │ :20132   │
+      └───────────┘  └───────────┘  └───────────┘
+```
+
+---
+
+## 📂 Estrutura do Projeto
+
+```
+claw-panel/
+├── claw-key-manager/     # Key Manager (Flask)
+│   ├── panel_vps.py       # Servidor principal
+│   ├── auth.py            # Autenticação
+│   ├── db.py              # Banco SQLite
+│   ├── health.py          # Health check
+│   ├── config.py.example  # Configuração exemplo
+│   └── templates.py       # HTML templates
+├── files_manager/         # Files Manager (Flask)
+│   ├── bot/
+│   │   ├── file_bot.py   # Bot + API
+│   │   └── files_ui.html # Interface web
+│   └── docker-compose.yml
+└── clawpanel-nginx/       # NGINX (opcional)
+    ├── nginx/default.conf
+    └── docker-compose.yml
+```
+
+---
+
+## ⚙️ Desenvolvimento
 
 ```bash
-pip install flask -q
-python3 panel_vps.py 20130
-```
+# Setup ambiente
+python3 -m venv venv
+source venv/bin/activate
+pip install flask requests
 
-Acesse `http://localhost:20130` — login com `admin` + a senha do `config.py`.
+# Rode localmente
+python3 claw-key-manager/panel_vps.py
 
----
-
-## Docker Swarm
-
-Deploy com Docker Swarm + Traefik:
-
-```bash
-docker stack deploy -c traefik.yaml haasgrow
-```
-
-O `traefik.yaml` já vem configurado com:
-- Imagem `python:3-alpine`
-- Volumes montados do host (módulos + DB)
-- Rotas Traefik para HTTPS em `clawpanel.haasgrow.cloud`
-- Health check_interval configurável (1/2/5/10 min)
-
----
-
-## API Endpoints
-
-### Autenticação
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| POST | `/api/login` | Login (username/password) |
-| POST | `/api/logout` | Logout |
-
-### Keys
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/api/keys` | Lista todas as keys |
-| POST | `/api/keys` | Ações: add, test, activate, delete, rename, import |
-
-### Configuração
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/api/config` | Mostra configuração atual |
-| POST | `/api/config` | Atualiza configuração |
-
-### Sistema
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| POST | `/api/health_check` | Força health check (sem fallback) |
-| POST | `/api/fallback` | Força fallback manual |
-| GET | `/api/fallback_log` | Histórico de trocas |
-| POST | `/api/restart_gateway` | Reinicia OpenClaw |
-
----
-
-## Estrutura do Projeto
-
-```
-claw-key-manager/
-├── config.py       # Configurações do painel
-├── db.py           # Camada de dados (SQLite)
-├── health.py       # Health check e fallback
-├── auth.py         # Autenticação e sessões
-├── templates.py    # HTML/CSS/JS do frontend
-├── panel_vps.py    # Entry point (rotas Flask)
-├── index.html     # Landing page pública
-├── traefik.yaml   # Docker Stack config
-└── README.md       # Este arquivo
+# Testes
+python3 -m pytest claw-key-manager/test_health.py
 ```
 
 ---
 
-## Landing Page
+## 🔒 Segurança
 
-Página pública disponível em `/lp` — sem necessidade de login. Ideal pra compartilhar o projeto.
-
----
-
-## Roadmap
-
-### Fase 1 — Infraestrutura (próxima)
-- [ ] Adicionar campo `provider` na tabela keys (`ollama` | `openai` | `openrouter` | `groq`)
-- [ ] Adapter layer: `ProviderAdapter` com método `test_key(api_key, model)` e `call(api_key, prompt)`
-- [ ] Health check genérico que usa o adapter correto por provider
-- [ ] API call genérica no fallback
-
-### Fase 2 — UX
-- [ ] Import simples: cola key direto, sem JSON
-- [ ] Detectar modelos disponíveis por key (GET /models ou similar)
-- [ ] Notificação WhatsApp quando fallback dispara
-
-### Fase 3 — Polish
-- [ ] Dashboard com gráfico de uso
-- [ ] Limpeza de keys mortas em massa
-- [ ] UI para selecionar provider/model ao adicionar key
+- **NUNCA** commite `config.py` ou `*.db`
+- Use variáveis de ambiente para secrets em produção
+- O banco SQLite (`*.db`) contém suas API keys — mantenha seguro
+- HTTPS é obrigatório em produção (use Traefik com TLS)
 
 ---
 
-## Autor
-
-**Paulo Girto** — [GitHub](https://github.com/paulogirto-hub)
-
----
-
-## Licença
+## 📝 Licença
 
 MIT

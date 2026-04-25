@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📁 Haasgrow Files</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --bg2: #141414;
+            --bg3: #1e1e1e;
+            --border: #2a2a2a;
+            --text: #e0e0e0;
+            --text2: #888;
+            --accent: #E1306C;
+            --accent2: #fd1d6b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header h1 { font-size: 1.4rem; color: var(--accent); }
+        .header-actions { display: flex; gap: 8px; }
+        .btn { background: var(--accent); color: #fff; padding: 9px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; }
+        .btn:hover { background: var(--accent2); }
+        .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+        .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .layout { display: flex; gap: 20px; min-height: calc(100vh - 80px); }
+        .sidebar { width: 200px; background: var(--bg2); border-radius: 12px; padding: 16px; flex-shrink: 0; }
+        .sidebar h3 { font-size: 0.75rem; text-transform: uppercase; color: var(--text2); margin-bottom: 10px; letter-spacing: 0.05em; }
+        .folder-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; color: var(--text2); transition: all 0.15s; }
+        .folder-item:hover { background: var(--bg3); color: var(--text); }
+        .folder-item.active { background: var(--accent); color: #fff; }
+        .folder-item .folder-icon { font-size: 1rem; }
+        .new-folder-btn { width: 100%; margin-top: 8px; background: transparent; border: 1px dashed var(--border); color: var(--text2); padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: all 0.15s; }
+        .new-folder-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .main { flex: 1; }
+        .breadcrumb { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; font-size: 0.85rem; color: var(--text2); flex-wrap: wrap; }
+        .breadcrumb span { cursor: pointer; padding: 3px 8px; border-radius: 6px; transition: all 0.15s; }
+        .breadcrumb span:hover { background: var(--bg3); color: var(--text); }
+        .breadcrumb span.current { color: var(--text); font-weight: 500; cursor: default; }
+        .breadcrumb span.current:hover { background: transparent; }
+        .breadcrumb .sep { color: var(--border); }
+        .files-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+        .file-card { background: var(--bg2); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; position: relative; }
+        .file-card:hover { border-color: var(--border); transform: translateY(-2px); }
+        .file-card.selected { border-color: var(--accent); background: var(--bg3); }
+        .file-card .file-icon { font-size: 2.2rem; margin-bottom: 10px; }
+        .file-card .file-name { font-size: 0.8rem; word-break: break-all; line-height: 1.3; margin-bottom: 6px; }
+        .file-card .file-meta { font-size: 0.7rem; color: var(--text2); }
+        .file-card .file-actions { display: none; position: absolute; top: 8px; right: 8px; gap: 4px; }
+        .file-card:hover .file-actions { display: flex; }
+        .file-card:hover .file-check { display: flex; }
+        .file-check { display: none; position: absolute; top: 8px; left: 8px; }
+        .file-check input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+        .file-action-btn { background: var(--bg); border: none; border-radius: 6px; padding: 5px; cursor: pointer; font-size: 0.9rem; opacity: 0.8; transition: opacity 0.15s; }
+        .file-action-btn:hover { opacity: 1; }
+        .folder-card { background: var(--bg2); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; text-align: center; }
+        .folder-card:hover { border-color: var(--border); transform: translateY(-2px); }
+        .folder-card .folder-icon { font-size: 2.2rem; margin-bottom: 10px; }
+        .folder-card .folder-name { font-size: 0.8rem; word-break: break-all; }
+        .actions-bar { display: none; align-items: center; gap: 10px; margin-bottom: 16px; padding: 12px; background: var(--bg2); border-radius: 10px; }
+        .actions-bar.visible { display: flex; }
+        .actions-bar span { font-size: 0.8rem; color: var(--text2); flex: 1; }
+        .upload-area { display: none; background: var(--bg2); border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; margin-bottom: 20px; transition: all 0.2s; }
+        .upload-area.dragover { border-color: var(--accent); background: var(--bg3); }
+        .upload-area p { color: var(--text2); font-size: 0.9rem; margin-top: 10px; }
+        .upload-area .accent { color: var(--accent); }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: var(--bg2); border-radius: 16px; padding: 28px; width: 90%; max-width: 420px; border: 1px solid var(--border); }
+        .modal-content h2 { font-size: 1.1rem; margin-bottom: 16px; }
+        .modal-content input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 0.9rem; margin-bottom: 10px; }
+        .modal-content input:focus { outline: none; border-color: var(--accent); }
+        .modal-content select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 0.9rem; margin-bottom: 10px; }
+        .modal-content .btn-row { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+        .modal-content .info-text { font-size: 0.8rem; color: var(--text2); margin-bottom: 10px; }
+        #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 12px 24px; border-radius: 10px; font-size: 0.85rem; z-index: 2000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        #toast.show { opacity: 1; }
+        .empty { text-align: center; padding: 60px 20px; color: var(--text2); }
+        .empty .icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
+        .empty p { font-size: 0.9rem; }
+        .upload-progress { background: var(--bg3); border-radius: 8px; margin-top: 15px; height: 6px; overflow: hidden; display: none; }
+        .upload-progress-bar { background: var(--accent); height: 100%; width: 0%; transition: width 0.3s; }
+        @media (max-width: 640px) {
+            .layout { flex-direction: column; }
+            .sidebar { width: 100%; }
+            .files-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>📁 Files</h1>
+    <div class="header-actions">
+        <button class="btn btn-ghost btn-sm" onclick="showNewFolderModal()">📁 Nova Pasta</button>
+        <button class="btn" onclick="showUploadArea()">📤 Upload</button>
+    </div>
+</div>
+<div class="layout">
+    <div class="sidebar">
+        <h3>Pastas</h3>
+        <div id="folderList">
+            <div class="folder-item active" onclick="navigateFolder(null)"><span class="folder-icon">🏠</span> Início</div>
+        </div>
+        <button class="new-folder-btn" onclick="showNewFolderModal()">+ Nova Pasta</button>
+    </div>
+    <div class="main">
+        <div class="breadcrumb" id="breadcrumb"><span class="current" onclick="navigateFolder(null)">Início</span></div>
+        <div class="actions-bar" id="actionsBar">
+            <span id="selectedCount">0 selecionados</span>
+            <button class="btn btn-ghost btn-sm" onclick="moveSelected()">📁 Mover</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearSelection()">✕ Limpar</button>
+        </div>
+        <div class="upload-area" id="uploadArea">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">📤</div>
+            <p>Arraste arquivos aqui ou <span class="accent" style="cursor:pointer" onclick="document.getElementById('fileInput').click()">clique pra selecionar</span></p>
+            <p style="font-size: 0.75rem; margin-top: 6px;">Máximo 20MB por arquivo</p>
+            <input type="file" id="fileInput" multiple onchange="handleFileSelect(event)">
+            <div class="upload-progress" id="progressBar"><div class="upload-progress-bar" id="progressFill"></div></div>
+        </div>
+        <div class="files-grid" id="filesGrid"></div>
+        <div class="empty" id="emptyState" style="display: none">
+            <div class="icon">📂</div>
+            <p id="emptyText">Pasta vazia</p>
+        </div>
+    </div>
+</div>
+<div class="modal" id="newFolderModal">
+    <div class="modal-content">
+        <h2>📁 Nova Pasta</h2>
+        <input type="text" id="newFolderName" placeholder="Nome da pasta" onkeydown="if(event.key==='Enter')createFolder()">
+        <div class="btn-row">
+            <button class="btn btn-ghost" onclick="closeModal('newFolderModal')">Cancelar</button>
+            <button class="btn" onclick="createFolder()">Criar</button>
+        </div>
+    </div>
+</div>
+<div class="modal" id="moveModal">
+    <div class="modal-content">
+        <h2>📁 Mover para...</h2>
+        <p class="info-text">Selecione a pasta de destino</p>
+        <select id="moveDestination"><option value="">🏠 Início (raiz)</option></select>
+        <div class="btn-row">
+            <button class="btn btn-ghost" onclick="closeModal('moveModal')">Cancelar</button>
+            <button class="btn" onclick="confirmMove()">Mover</button>
+        </div>
+    </div>
+</div>
+<div class="modal" id="renameModal">
+    <div class="modal-content">
+        <h2>✏️ Renomear</h2>
+        <input type="text" id="renameInput" onkeydown="if(event.key==='Enter')confirmRename()">
+        <div class="btn-row">
+            <button class="btn btn-ghost" onclick="closeModal('renameModal')">Cancelar</button>
+            <button class="btn" onclick="confirmRename()">Renomear</button>
+        </div>
+    </div>
+</div>
+<div id="toast"></div>
+<script>
+let currentFolder = null;
+let currentPath = [{ id: null, name: 'Início' }];
+let files = [];
+let folders = [];
+let selectedFiles = new Set();
+let renameTarget = null;
+let moveSource = null;
+
+function getMimeIcon(mime) {
+    if (!mime) return '📄';
+    if (mime.startsWith('image/')) return '🖼️';
+    if (mime.startsWith('video/')) return '🎬';
+    if (mime.startsWith('audio/')) return '🎵';
+    if (mime.includes('pdf')) return '📕';
+    if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar')) return '📦';
+    if (mime.includes('doc') || mime.includes('sheet')) return '📘';
+    return '📄';
+}
+function formatSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function isImage(mime) { return mime && mime.startsWith('image/'); }
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadAll() {
+    await Promise.all([loadFiles(), loadFolders()]);
+    render();
+}
+
+async function loadFiles() {
+    const params = currentFolder ? '?folder=' + encodeURIComponent(currentFolder) : '';
+    const res = await fetch('/files/api/list' + params);
+    if (!res.ok) return;
+    files = await res.json();
+}
+
+async function loadFolders() {
+    const res = await fetch('/files/api/folders');
+    if (!res.ok) return;
+    folders = await res.json();
+}
+
+function render() {
+    renderBreadcrumb();
+    renderSidebar();
+    renderGrid();
+    updateActionsBar();
+}
+
+function renderBreadcrumb() {
+    const bc = document.getElementById('breadcrumb');
+    bc.innerHTML = currentPath.map((p, i) => {
+        const isLast = i === currentPath.length - 1;
+        return '<span class="' + (isLast ? 'current' : '') + '"' + (!isLast ? ' onclick="navigateTo(' + i + ')"' : '') + '>' + p.name + '</span>' + (!isLast ? '<span class="sep">›</span>' : '');
+    }).join('');
+}
+
+function renderSidebar() {
+    const list = document.getElementById('folderList');
+    let html = '<div class="folder-item ' + (!currentFolder ? 'active' : '') + '" onclick="navigateFolder(null)"><span class="folder-icon">🏠</span> Início</div>';
+    folders.filter(f => f.parent_id === currentFolder).forEach(f => {
+        html += '<div class="folder-item" onclick="navigateFolder(\'' + f.id + '\')"><span class="folder-icon">📁</span> ' + escapeHtml(f.name) + '</div>';
+    });
+    list.innerHTML = html;
+}
+
+function renderGrid() {
+    const grid = document.getElementById('filesGrid');
+    const empty = document.getElementById('emptyState');
+    const emptyText = document.getElementById('emptyText');
+    const items = [];
+
+    folders.filter(f => f.parent_id === currentFolder).forEach(f => {
+        items.push('<div class="folder-card" onclick="navigateFolder(\'' + f.id + '\')"><div class="folder-icon">📁</div><div class="folder-name">' + escapeHtml(f.name) + '</div></div>');
+    });
+
+    const filesHere = files.filter(f => currentFolder ? f.folder === (currentFolder || '/') : f.folder === '/');
+    filesHere.forEach(f => {
+        const isSelected = selectedFiles.has(f.token);
+        const isImg = isImage(f.mime_type);
+        const thumb = isImg ? '<img class="file-thumb" src="/f/' + f.token + '" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-bottom:8px;" onerror="this.style.display=\'none\'">' : '<div class="file-icon">' + getMimeIcon(f.mime_type) + '</div>';
+        items.push('<div class="file-card ' + (isSelected ? 'selected' : '') + '" onclick="toggleSelect(\'' + f.token + '\', event)">' +
+            '<div class="file-check"><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleSelect(\'' + f.token + '\', event)"></div>' +
+            '<div class="file-actions"><button class="file-action-btn" title="Copiar link" onclick="event.stopPropagation(); copyLink(\'' + f.token + '\')">🔗</button>' +
+            '<button class="file-action-btn" title="Mover" onclick="event.stopPropagation(); moveFile(\'' + f.token + '\')">📁</button>' +
+            '<button class="file-action-btn" title="Renomear" onclick="event.stopPropagation(); renameFile(\'' + f.token + '\', \'' + escapeHtml(f.filename) + '\')">✏️</button>' +
+            '<button class="file-action-btn" title="Deletar" onclick="event.stopPropagation(); deleteFile(\'' + f.token + '\')">🗑️</button></div>' +
+            thumb + '<div class="file-name">' + escapeHtml(f.filename) + '</div><div class="file-meta">' + formatSize(f.size) + '</div></div>');
+    });
+
+    grid.innerHTML = items.join('');
+    if (items.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+        emptyText.textContent = currentFolder ? 'Pasta vazia' : 'Nenhum arquivo';
+    } else {
+        grid.style.display = 'grid';
+        empty.style.display = 'none';
+    }
+}
+
+function updateActionsBar() {
+    const bar = document.getElementById('actionsBar');
+    const count = document.getElementById('selectedCount');
+    if (selectedFiles.size > 0) {
+        bar.classList.add('visible');
+        count.textContent = selectedFiles.size + ' selecionado(s)';
+    } else {
+        bar.classList.remove('visible');
+    }
+}
+
+async function navigateFolder(folderId) {
+    if (folderId === currentFolder) return;
+    currentFolder = folderId;
+    selectedFiles.clear();
+    if (folderId) {
+        const f = folders.find(x => x.id === folderId);
+        currentPath = [{ id: null, name: 'Início' }, { id: folderId, name: f ? f.name : '...' }];
+    } else {
+        currentPath = [{ id: null, name: 'Início' }];
+    }
+    await loadAll();
+}
+
+function navigateTo(index) {
+    const target = currentPath[index];
+    if (target) navigateFolder(target.id);
+}
+
+function toggleSelect(token, event) {
+    if (event) event.stopPropagation();
+    if (selectedFiles.has(token)) selectedFiles.delete(token);
+    else selectedFiles.add(token);
+    render();
+}
+
+function clearSelection() { selectedFiles.clear(); render(); }
+
+async function copyLink(token) {
+    try {
+        await navigator.clipboard.writeText(window.location.origin + '/f/' + token);
+        showToast('🔗 Link copiado!');
+    } catch { showToast('Erro ao copiar'); }
+}
+
+async function deleteFile(token) {
+    if (!confirm('Deletar este arquivo?')) return;
+    const res = await fetch('/files/api/files/' + token, { method: 'DELETE' });
+    if (res.ok) { showToast('🗑️ Deletado!'); await loadAll(); }
+    else showToast('❌ Erro ao deletar');
+}
+
+function renameFile(token, currentName) {
+    renameTarget = token;
+    document.getElementById('renameInput').value = currentName;
+    document.getElementById('renameModal').classList.add('show');
+    setTimeout(() => document.getElementById('renameInput').focus(), 50);
+}
+
+async function confirmRename() {
+    const newName = document.getElementById('renameInput').value.trim();
+    if (!newName || !renameTarget) return closeModal('renameModal');
+    const res = await fetch('/files/api/files/' + renameTarget + '/rename', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: newName })
+    });
+    if (res.ok) { showToast('✏️ Renomeado!'); closeModal('renameModal'); await loadAll(); }
+    else showToast('❌ Erro ao renomear');
+}
+
+function moveFile(token) { moveSource = [token]; openMoveModal(); }
+async function moveSelected() { if (selectedFiles.size === 0) return; moveSource = Array.from(selectedFiles); openMoveModal(); }
+
+async function openMoveModal() {
+    const sel = document.getElementById('moveDestination');
+    sel.innerHTML = '<option value="">🏠 Início (raiz)</option>';
+    const res = await fetch('/files/api/folders');
+    if (res.ok) {
+        const allFolders = await res.json();
+        function addOptions(folders, parentId, prefix) {
+            folders.filter(f => f.parent_id === parentId).forEach(f => {
+                sel.innerHTML += '<option value="' + f.id + '">' + prefix + '📁 ' + escapeHtml(f.name) + '</option>';
+                addOptions(folders, f.id, prefix + '&nbsp;&nbsp;');
+            });
+        }
+        addOptions(allFolders, null, '');
+    }
+    document.getElementById('moveModal').classList.add('show');
+}
+
+async function confirmMove() {
+    if (!moveSource || moveSource.length === 0) return closeModal('moveModal');
+    const destination = document.getElementById('moveDestination').value;
+    let ok = true;
+    for (const token of moveSource) {
+        const body = { folder: destination || '/', parent_folder: destination || null };
+        const res = await fetch('/files/api/files/' + token + '/move', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        if (!res.ok) ok = false;
+    }
+    if (ok) {
+        showToast(moveSource.length > 1 ? '📁 ' + moveSource.length + ' arquivos movidos!' : '📁 Arquivo movido!');
+        closeModal('moveModal');
+        selectedFiles.clear();
+        await loadAll();
+    } else showToast('❌ Erro ao mover');
+}
+
+function showNewFolderModal() {
+    document.getElementById('newFolderName').value = '';
+    document.getElementById('newFolderModal').classList.add('show');
+    setTimeout(() => document.getElementById('newFolderName').focus(), 50);
+}
+
+async function createFolder() {
+    const name = document.getElementById('newFolderName').value.trim();
+    if (!name) return;
+    const res = await fetch('/files/api/folders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, parent: currentFolder || '/' })
+    });
+    if (res.ok) { showToast('📁 Pasta criada!'); closeModal('newFolderModal'); await loadAll(); }
+    else { const err = await res.json(); showToast('❌ ' + (err.error || 'Erro')); }
+}
+
+function showUploadArea() {
+    const area = document.getElementById('uploadArea');
+    area.style.display = area.style.display === 'block' ? 'none' : 'block';
+}
+
+function handleFileSelect(event) {
+    const files = event.target.files;
+    if (!files.length) return;
+    uploadFiles(Array.from(files));
+    event.target.value = '';
+}
+
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files);
+    if (files.length) uploadFiles(files);
+});
+
+async function uploadFiles(files) {
+    if (files.length === 0) return;
+    document.getElementById('progressBar').style.display = 'block';
+    document.getElementById('progressFill').style.width = '0%';
+    let success = 0, fail = 0;
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            await new Promise((resolve) => {
+                const xhr = new XMLHttpRequest();
+                xhr.upload.onprogress = e => {
+                    if (e.lengthComputable) {
+                        const pct = ((e.loaded / e.total) * 100) / files.length + (i / files.length) * 100;
+                        document.getElementById('progressFill').style.width = pct + '%';
+                    }
+                };
+                xhr.onload = () => { if (xhr.status === 200) success++; else fail++; resolve(); };
+                xhr.onerror = () => { fail++; resolve(); };
+                xhr.open('POST', '/files/api/upload');
+                xhr.send(formData);
+            });
+        } catch (e) { fail++; }
+    }
+    document.getElementById('progressBar').style.display = 'none';
+    document.getElementById('progressFill').style.width = '0%';
+    if (fail === 0) showToast('✅ ' + success + ' arquivo(s) enviado(s)!');
+    else showToast('⚠️ ' + success + ' ok, ' + fail + ' falhou');
+    document.getElementById('uploadArea').style.display = 'none';
+    await loadAll();
+}
+
+loadAll();
+</script>
+</body>
+</html>
