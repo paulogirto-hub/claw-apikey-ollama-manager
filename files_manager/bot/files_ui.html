@@ -19,19 +19,26 @@
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         .header h1 { font-size: 1.4rem; color: var(--accent); }
-        .header-actions { display: flex; gap: 8px; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
         .btn { background: var(--accent); color: #fff; padding: 9px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; }
         .btn:hover { background: var(--accent2); }
         .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text2); }
         .btn-ghost:hover { background: var(--bg3); color: var(--text); }
         .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .search-input { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; color: var(--text); font-size: 0.85rem; width: 200px; transition: all 0.2s; }
+        .search-input:focus { outline: none; border-color: var(--accent); width: 260px; }
+        .search-input::placeholder { color: var(--text2); }
         .layout { display: flex; gap: 20px; min-height: calc(100vh - 80px); }
         .sidebar { width: 200px; background: var(--bg2); border-radius: 12px; padding: 16px; flex-shrink: 0; }
         .sidebar h3 { font-size: 0.75rem; text-transform: uppercase; color: var(--text2); margin-bottom: 10px; letter-spacing: 0.05em; }
-        .folder-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; color: var(--text2); transition: all 0.15s; }
+        .folder-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; color: var(--text2); transition: all 0.15s; position: relative; }
         .folder-item:hover { background: var(--bg3); color: var(--text); }
+        .folder-item:hover .folder-actions { display: flex; }
         .folder-item.active { background: var(--accent); color: #fff; }
         .folder-item .folder-icon { font-size: 1rem; }
+        .folder-item .folder-actions { display: none; position: absolute; right: 6px; gap: 2px; }
+        .folder-action-btn { background: none; border: none; border-radius: 4px; padding: 3px; cursor: pointer; font-size: 0.8rem; opacity: 0.7; transition: opacity 0.15s; }
+        .folder-action-btn:hover { opacity: 1; }
         .new-folder-btn { width: 100%; margin-top: 8px; background: transparent; border: 1px dashed var(--border); color: var(--text2); padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: all 0.15s; }
         .new-folder-btn:hover { border-color: var(--accent); color: var(--accent); }
         .main { flex: 1; }
@@ -41,6 +48,10 @@
         .breadcrumb span.current { color: var(--text); font-weight: 500; cursor: default; }
         .breadcrumb span.current:hover { background: transparent; }
         .breadcrumb .sep { color: var(--border); }
+        .search-results-banner { display: none; align-items: center; gap: 10px; margin-bottom: 16px; padding: 10px 14px; background: var(--bg2); border-radius: 10px; font-size: 0.85rem; color: var(--text2); }
+        .search-results-banner.visible { display: flex; }
+        .search-results-banner button { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 1rem; padding: 0; }
+        .search-results-banner button:hover { color: var(--text); }
         .files-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
         .file-card { background: var(--bg2); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; position: relative; }
         .file-card:hover { border-color: var(--border); transform: translateY(-2px); }
@@ -55,8 +66,10 @@
         .file-check input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
         .file-action-btn { background: var(--bg); border: none; border-radius: 6px; padding: 5px; cursor: pointer; font-size: 0.9rem; opacity: 0.8; transition: opacity 0.15s; }
         .file-action-btn:hover { opacity: 1; }
-        .folder-card { background: var(--bg2); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; text-align: center; }
+        .folder-card { background: var(--bg2); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; text-align: center; position: relative; }
         .folder-card:hover { border-color: var(--border); transform: translateY(-2px); }
+        .folder-card:hover .folder-card-actions { display: flex; }
+        .folder-card .folder-card-actions { display: none; position: absolute; top: 8px; right: 8px; gap: 4px; }
         .folder-card .folder-icon { font-size: 2.2rem; margin-bottom: 10px; }
         .folder-card .folder-name { font-size: 0.8rem; word-break: break-all; }
         .actions-bar { display: none; align-items: center; gap: 10px; margin-bottom: 16px; padding: 12px; background: var(--bg2); border-radius: 10px; }
@@ -75,6 +88,10 @@
         .modal-content select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 0.9rem; margin-bottom: 10px; }
         .modal-content .btn-row { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
         .modal-content .info-text { font-size: 0.8rem; color: var(--text2); margin-bottom: 10px; }
+        .modal-content label { font-size: 0.8rem; color: var(--text2); display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px; }
+        .modal-content label input[type="checkbox"] { accent-color: var(--accent); }
+        .modal-content .expiry-warning { display: none; font-size: 0.75rem; color: #f39c12; background: rgba(243,156,18,0.1); padding: 8px 12px; border-radius: 8px; margin-top: 8px; }
+        .modal-content .expiry-warning.visible { display: block; }
         #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 12px 24px; border-radius: 10px; font-size: 0.85rem; z-index: 2000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
         #toast.show { opacity: 1; }
         .empty { text-align: center; padding: 60px 20px; color: var(--text2); }
@@ -82,10 +99,20 @@
         .empty p { font-size: 0.9rem; }
         .upload-progress { background: var(--bg3); border-radius: 8px; margin-top: 15px; height: 6px; overflow: hidden; display: none; }
         .upload-progress-bar { background: var(--accent); height: 100%; width: 0%; transition: width 0.3s; }
+        .media-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
+        .media-modal.show { display: flex; }
+        .media-modal .media-content { max-width: 90vw; max-height: 85vh; }
+        .media-modal .media-content img { max-width: 100%; max-height: 85vh; border-radius: 8px; }
+        .media-modal .media-content video { max-width: 100%; max-height: 85vh; border-radius: 8px; }
+        .media-modal .media-content audio { width: 400px; max-width: 90vw; }
+        .media-modal .close-btn { position: absolute; top: 20px; right: 20px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
+        .media-modal .close-btn:hover { background: var(--bg); }
         @media (max-width: 640px) {
             .layout { flex-direction: column; }
             .sidebar { width: 100%; }
             .files-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+            .search-input { width: 140px; }
+            .search-input:focus { width: 180px; }
         }
     </style>
 </head>
@@ -93,6 +120,7 @@
 <div class="header">
     <h1>📁 Files</h1>
     <div class="header-actions">
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar arquivos..." onkeydown="if(event.key==='Enter')doSearch()" oninput="debounceSearch()">
         <button class="btn btn-ghost btn-sm" onclick="showNewFolderModal()">📁 Nova Pasta</button>
         <button class="btn" onclick="showUploadArea()">📤 Upload</button>
     </div>
@@ -107,9 +135,14 @@
     </div>
     <div class="main">
         <div class="breadcrumb" id="breadcrumb"><span class="current" onclick="navigateFolder(null)">Início</span></div>
+        <div class="search-results-banner" id="searchBanner">
+            <span id="searchBannerText"></span>
+            <button onclick="clearSearch()" title="Limpar busca">✕</button>
+        </div>
         <div class="actions-bar" id="actionsBar">
             <span id="selectedCount">0 selecionados</span>
             <button class="btn btn-ghost btn-sm" onclick="moveSelected()">📁 Mover</button>
+            <button class="btn btn-ghost btn-sm" id="zipDownloadBtn" style="display:none" onclick="downloadZip()">📦 Baixar ZIP</button>
             <button class="btn btn-ghost btn-sm" onclick="clearSelection()">✕ Limpar</button>
         </div>
         <div class="upload-area" id="uploadArea">
@@ -157,6 +190,32 @@
         </div>
     </div>
 </div>
+<div class="modal" id="copyLinkModal">
+    <div class="modal-content">
+        <h2>🔗 Copiar Link</h2>
+        <p class="info-text" id="copyLinkFilename"></p>
+        <input type="text" id="copyLinkInput" readonly style="cursor:pointer" onclick="this.select()">
+        <label>
+            <input type="checkbox" id="expiryCheck" onchange="toggleExpiryOptions()">
+            Link expira em:
+        </label>
+        <select id="expirySelect" style="display:none">
+            <option value="">Nunca</option>
+            <option value="1">1 hora</option>
+            <option value="24">24 horas</option>
+            <option value="168">7 dias</option>
+        </select>
+        <div class="expiry-warning" id="expiryWarning">⚠️ Após expirar, o link não funcionará mais.</div>
+        <div class="btn-row">
+            <button class="btn btn-ghost" onclick="closeModal('copyLinkModal')">Cancelar</button>
+            <button class="btn" onclick="confirmCopyLink()">Copiar</button>
+        </div>
+    </div>
+</div>
+<div class="media-modal" id="mediaModal">
+    <button class="close-btn" onclick="closeMediaModal()">✕</button>
+    <div class="media-content" id="mediaContent"></div>
+</div>
 <div id="toast"></div>
 <script>
 let currentFolder = null;
@@ -166,6 +225,10 @@ let folders = [];
 let selectedFiles = new Set();
 let renameTarget = null;
 let moveSource = null;
+let copyLinkTarget = null;
+let searchTimeout = null;
+let isSearchMode = false;
+let searchResults = [];
 
 function getMimeIcon(mime) {
     if (!mime) return '📄';
@@ -176,6 +239,10 @@ function getMimeIcon(mime) {
     if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar')) return '📦';
     if (mime.includes('doc') || mime.includes('sheet')) return '📘';
     return '📄';
+}
+function isPreviewable(mime) {
+    if (!mime) return false;
+    return mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/');
 }
 function formatSize(bytes) {
     if (!bytes || bytes === 0) return '0 B';
@@ -195,6 +262,30 @@ function isImage(mime) { return mime && mime.startsWith('image/'); }
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) { clearSearch(); return; }
+    searchTimeout = setTimeout(() => doSearch(), 500);
+}
+async function doSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+    isSearchMode = true;
+    const res = await fetch('/files/api/search?q=' + encodeURIComponent(q));
+    if (!res.ok) return;
+    searchResults = await res.json();
+    document.getElementById('searchBanner').classList.add('visible');
+    document.getElementById('searchBannerText').textContent = '🔍 ' + searchResults.length + ' resultado(s) para "' + escapeHtml(q) + '"';
+    renderGrid(searchResults);
+}
+function clearSearch() {
+    isSearchMode = false;
+    searchResults = [];
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchBanner').classList.remove('visible');
+    renderGrid(files);
 }
 
 async function loadAll() {
@@ -218,12 +309,16 @@ async function loadFolders() {
 function render() {
     renderBreadcrumb();
     renderSidebar();
-    renderGrid();
+    renderGrid(isSearchMode ? searchResults : files);
     updateActionsBar();
 }
 
 function renderBreadcrumb() {
     const bc = document.getElementById('breadcrumb');
+    if (isSearchMode) {
+        bc.innerHTML = '<span class="current">🔍 Busca</span>';
+        return;
+    }
     bc.innerHTML = currentPath.map((p, i) => {
         const isLast = i === currentPath.length - 1;
         return '<span class="' + (isLast ? 'current' : '') + '"' + (!isLast ? ' onclick="navigateTo(' + i + ')"' : '') + '>' + p.name + '</span>' + (!isLast ? '<span class="sep">›</span>' : '');
@@ -234,29 +329,34 @@ function renderSidebar() {
     const list = document.getElementById('folderList');
     let html = '<div class="folder-item ' + (!currentFolder ? 'active' : '') + '" onclick="navigateFolder(null)"><span class="folder-icon">🏠</span> Início</div>';
     folders.filter(f => f.parent_id === currentFolder).forEach(f => {
-        html += '<div class="folder-item" onclick="navigateFolder(\'' + f.id + '\')"><span class="folder-icon">📁</span> ' + escapeHtml(f.name) + '</div>';
+        html += '<div class="folder-item" onclick="navigateFolder(\'' + f.id + '\')"><span class="folder-icon">📁</span> ' + escapeHtml(f.name) +
+            '<div class="folder-actions"><button class="folder-action-btn" title="Renomear" onclick="event.stopPropagation(); renameFolder(\'' + f.id + '\', \'' + escapeHtml(f.name) + '\')">✏️</button></div></div>';
     });
     list.innerHTML = html;
 }
 
-function renderGrid() {
+function renderGrid(fileList) {
     const grid = document.getElementById('filesGrid');
     const empty = document.getElementById('emptyState');
     const emptyText = document.getElementById('emptyText');
     const items = [];
 
-    folders.filter(f => f.parent_id === currentFolder).forEach(f => {
-        items.push('<div class="folder-card" onclick="navigateFolder(\'' + f.id + '\')"><div class="folder-icon">📁</div><div class="folder-name">' + escapeHtml(f.name) + '</div></div>');
-    });
+    if (!isSearchMode) {
+        folders.filter(f => f.parent_id === currentFolder).forEach(f => {
+            items.push('<div class="folder-card"><div class="folder-icon">📁</div><div class="folder-name">' + escapeHtml(f.name) + '</div>' +
+                '<div class="folder-card-actions"><button class="file-action-btn" title="Renomear" onclick="event.stopPropagation(); renameFolder(\'' + f.id + '\', \'' + escapeHtml(f.name) + '\')">✏️</button>' +
+                '<button class="file-action-btn" title="Deletar" onclick="event.stopPropagation(); deleteFolder(\'' + f.id + '\')">🗑️</button></div></div>');
+        });
+    }
 
-    const filesHere = files.filter(f => currentFolder ? f.folder === (currentFolder || '/') : f.folder === '/');
-    filesHere.forEach(f => {
+    fileList.forEach(f => {
         const isSelected = selectedFiles.has(f.token);
         const isImg = isImage(f.mime_type);
         const thumb = isImg ? '<img class="file-thumb" src="/f/' + f.token + '" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-bottom:8px;" onerror="this.style.display=\'none\'">' : '<div class="file-icon">' + getMimeIcon(f.mime_type) + '</div>';
-        items.push('<div class="file-card ' + (isSelected ? 'selected' : '') + '" onclick="toggleSelect(\'' + f.token + '\', event)">' +
+        const previewAttr = isPreviewable(f.mime_type) ? ' onclick="previewMedia(\'' + f.token + '\', \'' + escapeHtml(f.mime_type) + '\')"' : '';
+        items.push('<div class="file-card ' + (isSelected ? 'selected' : '') + '"' + previewAttr + '>' +
             '<div class="file-check"><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleSelect(\'' + f.token + '\', event)"></div>' +
-            '<div class="file-actions"><button class="file-action-btn" title="Copiar link" onclick="event.stopPropagation(); copyLink(\'' + f.token + '\')">🔗</button>' +
+            '<div class="file-actions"><button class="file-action-btn" title="Copiar link" onclick="event.stopPropagation(); copyLink(\'' + f.token + '\', \'' + escapeHtml(f.filename) + '\')">🔗</button>' +
             '<button class="file-action-btn" title="Mover" onclick="event.stopPropagation(); moveFile(\'' + f.token + '\')">📁</button>' +
             '<button class="file-action-btn" title="Renomear" onclick="event.stopPropagation(); renameFile(\'' + f.token + '\', \'' + escapeHtml(f.filename) + '\')">✏️</button>' +
             '<button class="file-action-btn" title="Deletar" onclick="event.stopPropagation(); deleteFile(\'' + f.token + '\')">🗑️</button></div>' +
@@ -267,7 +367,7 @@ function renderGrid() {
     if (items.length === 0) {
         grid.style.display = 'none';
         empty.style.display = 'block';
-        emptyText.textContent = currentFolder ? 'Pasta vazia' : 'Nenhum arquivo';
+        emptyText.textContent = isSearchMode ? 'Nenhum resultado' : (currentFolder ? 'Pasta vazia' : 'Nenhum arquivo');
     } else {
         grid.style.display = 'grid';
         empty.style.display = 'none';
@@ -277,11 +377,14 @@ function renderGrid() {
 function updateActionsBar() {
     const bar = document.getElementById('actionsBar');
     const count = document.getElementById('selectedCount');
+    const zipBtn = document.getElementById('zipDownloadBtn');
     if (selectedFiles.size > 0) {
         bar.classList.add('visible');
         count.textContent = selectedFiles.size + ' selecionado(s)';
+        zipBtn.style.display = selectedFiles.size > 1 ? 'inline-block' : 'none';
     } else {
         bar.classList.remove('visible');
+        zipBtn.style.display = 'none';
     }
 }
 
@@ -289,6 +392,10 @@ async function navigateFolder(folderId) {
     if (folderId === currentFolder) return;
     currentFolder = folderId;
     selectedFiles.clear();
+    isSearchMode = false;
+    searchResults = [];
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchBanner').classList.remove('visible');
     if (folderId) {
         const f = folders.find(x => x.id === folderId);
         currentPath = [{ id: null, name: 'Início' }, { id: folderId, name: f ? f.name : '...' }];
@@ -307,16 +414,67 @@ function toggleSelect(token, event) {
     if (event) event.stopPropagation();
     if (selectedFiles.has(token)) selectedFiles.delete(token);
     else selectedFiles.add(token);
-    render();
+    updateActionsBar();
+    // Re-render checkboxes without full re-render
+    document.querySelectorAll('.file-check input').forEach(cb => {
+        const t = cb.onclick.toString().match(/'([^']+)'/)[1];
+        cb.checked = selectedFiles.has(t);
+    });
 }
 
-function clearSelection() { selectedFiles.clear(); render(); }
+function clearSelection() { selectedFiles.clear(); updateActionsBar(); renderGrid(isSearchMode ? searchResults : files); }
 
-async function copyLink(token) {
+async function previewMedia(token, mime) {
+    const modal = document.getElementById('mediaModal');
+    const content = document.getElementById('mediaContent');
+    if (mime.startsWith('image/')) {
+        content.innerHTML = '<img src="/f/' + token + '">';
+    } else if (mime.startsWith('video/')) {
+        content.innerHTML = '<video src="/f/' + token + '" controls></video>';
+    } else if (mime.startsWith('audio/')) {
+        content.innerHTML = '<audio src="/f/' + token + '" controls></audio>';
+    }
+    modal.classList.add('show');
+}
+function closeMediaModal() {
+    document.getElementById('mediaModal').classList.remove('show');
+    document.getElementById('mediaContent').innerHTML = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMediaModal(); });
+
+async function copyLink(token, filename) {
+    copyLinkTarget = token;
+    document.getElementById('copyLinkFilename').textContent = filename;
+    const expirySelect = document.getElementById('expirySelect');
+    expirySelect.value = '';
+    document.getElementById('expiryCheck').checked = false;
+    expirySelect.style.display = 'none';
+    document.getElementById('expiryWarning').classList.remove('visible');
+    document.getElementById('copyLinkInput').value = window.location.origin + '/f/' + token;
+    document.getElementById('copyLinkModal').classList.add('show');
+}
+function toggleExpiryOptions() {
+    const checked = document.getElementById('expiryCheck').checked;
+    document.getElementById('expirySelect').style.display = checked ? 'block' : 'none';
+    document.getElementById('expiryWarning').classList.toggle('visible', checked);
+}
+async function confirmCopyLink() {
+    const hasExpiry = document.getElementById('expiryCheck').checked;
+    const expiryHours = hasExpiry ? parseInt(document.getElementById('expirySelect').value) : null;
+    let url;
+    if (expiryHours) {
+        const res = await fetch('/files/api/share/' + copyLinkTarget + '?exp=' + expiryHours);
+        if (!res.ok) { showToast('❌ Erro ao gerar link'); return; }
+        const data = await res.json();
+        url = data.url;
+    } else {
+        url = window.location.origin + '/f/' + copyLinkTarget;
+    }
     try {
-        await navigator.clipboard.writeText(window.location.origin + '/f/' + token);
-        showToast('🔗 Link copiado!');
+        await navigator.clipboard.writeText(url);
+        showToast('🔗 Link copiado!' + (expiryHours ? ' (expira em ' + expiryHours + 'h)' : ''));
     } catch { showToast('Erro ao copiar'); }
+    closeModal('copyLinkModal');
 }
 
 async function deleteFile(token) {
@@ -326,8 +484,21 @@ async function deleteFile(token) {
     else showToast('❌ Erro ao deletar');
 }
 
+async function deleteFolder(folderId) {
+    if (!confirm('Deletar esta pasta? Ela deve estar vazia.')) return;
+    const res = await fetch('/files/api/folders/' + folderId, { method: 'DELETE' });
+    if (res.ok) { showToast('🗑️ Pasta deletada!'); await loadAll(); }
+    else { const err = await res.json(); showToast('❌ ' + (err.error || 'Erro')); }
+}
+
 function renameFile(token, currentName) {
-    renameTarget = token;
+    renameTarget = { type: 'file', id: token };
+    document.getElementById('renameInput').value = currentName;
+    document.getElementById('renameModal').classList.add('show');
+    setTimeout(() => document.getElementById('renameInput').focus(), 50);
+}
+function renameFolder(folderId, currentName) {
+    renameTarget = { type: 'folder', id: folderId };
     document.getElementById('renameInput').value = currentName;
     document.getElementById('renameModal').classList.add('show');
     setTimeout(() => document.getElementById('renameInput').focus(), 50);
@@ -336,12 +507,21 @@ function renameFile(token, currentName) {
 async function confirmRename() {
     const newName = document.getElementById('renameInput').value.trim();
     if (!newName || !renameTarget) return closeModal('renameModal');
-    const res = await fetch('/files/api/files/' + renameTarget + '/rename', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: newName })
-    });
-    if (res.ok) { showToast('✏️ Renomeado!'); closeModal('renameModal'); await loadAll(); }
-    else showToast('❌ Erro ao renomear');
+    if (renameTarget.type === 'folder') {
+        const res = await fetch('/files/api/folders/' + renameTarget.id, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newName })
+        });
+        if (res.ok) { showToast('✏️ Pasta renomeada!'); closeModal('renameModal'); await loadAll(); }
+        else { const err = await res.json(); showToast('❌ ' + (err.error || 'Erro')); }
+    } else {
+        const res = await fetch('/files/api/files/' + renameTarget.id + '/rename', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: newName })
+        });
+        if (res.ok) { showToast('✏️ Renomeado!'); closeModal('renameModal'); await loadAll(); }
+        else showToast('❌ Erro ao renomear');
+    }
 }
 
 function moveFile(token) { moveSource = [token]; openMoveModal(); }
@@ -383,6 +563,27 @@ async function confirmMove() {
     } else showToast('❌ Erro ao mover');
 }
 
+async function downloadZip() {
+    if (selectedFiles.size < 2) return;
+    const tokens = Array.from(selectedFiles);
+    showToast('📦 Preparando ZIP...');
+    try {
+        const res = await fetch('/files/api/batch-download', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tokens })
+        });
+        if (!res.ok) throw new Error('Erro');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'files.zip';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('✅ ZIP gerado!');
+    } catch { showToast('❌ Erro ao gerar ZIP'); }
+}
+
 function showNewFolderModal() {
     document.getElementById('newFolderName').value = '';
     document.getElementById('newFolderModal').classList.add('show');
@@ -406,9 +607,9 @@ function showUploadArea() {
 }
 
 function handleFileSelect(event) {
-    const files = event.target.files;
-    if (!files.length) return;
-    uploadFiles(Array.from(files));
+    const f = event.target.files;
+    if (!f.length) return;
+    uploadFiles(Array.from(f));
     event.target.value = '';
 }
 
@@ -418,8 +619,8 @@ uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag
 uploadArea.addEventListener('drop', e => {
     e.preventDefault();
     uploadArea.classList.remove('dragover');
-        const files = Array.from(e.dataTransfer.files);
-    if (files.length) uploadFiles(files);
+    const f = Array.from(e.dataTransfer.files);
+    if (f.length) uploadFiles(f);
 });
 
 async function uploadFiles(files) {

@@ -1,0 +1,5 @@
+FROM python:3.11-slim
+WORKDIR /root
+RUN pip install flask requests -q
+COPY bot/file_bot.py /root/file_bot.py
+CMD ["python3", "/root/file_bot.py"]

@@ -9,11 +9,11 @@ from datetime import datetime
 from flask import Flask, request, jsonify, send_file, abort, Response
 
 # ============== CONFIG ==============
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "SEU_BOT_TOKEN_AQUI")
-BASE_URL = os.environ.get("BASE_URL", "https://seu-dominio.com")
-DB_FILE = os.environ.get("DB_FILE", "/root/files.db")
+BOT_TOKEN = "8674753840:AAG6eYfogasjqgOsS0UyXPxwXODSMPVRuNg"
+BASE_URL = "https://clawpanel.haasgrow.cloud"
+DB_FILE = "/root/files.db"
 STORAGE_DIR = "/root/telegram_files"  # Temporary cache only
-ALLOWED_USER = os.environ.get("ALLOWED_USER", "SEU_TELEGRAM_USER_ID")  # Paulo only
+ALLOWED_USER = "7869694923"  # Paulo only
 # ====================================
 
 app = Flask(__name__)
@@ -103,10 +103,10 @@ def db_list_files(folder=None, parent_folder=None, user_id=None):
     c = conn.cursor()
     if parent_folder is not None:
         c.execute("SELECT * FROM files WHERE parent_folder IS ? ORDER BY uploaded_at DESC", (parent_folder,))
-    elif folder:
+    elif folder is not None:
         c.execute("SELECT * FROM files WHERE folder=? ORDER BY uploaded_at DESC", (folder,))
     else:
-        c.execute("SELECT * FROM files ORDER BY uploaded_at DESC")
+        c.execute("SELECT * FROM files WHERE folder='/' OR folder='' OR folder IS NULL ORDER BY uploaded_at DESC")
     rows = c.fetchall()
     conn.close()
     return rows
@@ -118,7 +118,23 @@ def db_delete_file(token):
     conn.commit()
     conn.close()
 
-def db_get_file(token):
+def db_rename_folder(folder_id, new_name):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("UPDATE folders SET name=? WHERE id=?", (new_name, folder_id))
+    conn.commit()
+    conn.close()
+    return c.rowcount > 0
+
+def db_search_files(term):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT * FROM files WHERE LOWER(filename) LIKE ? ORDER BY uploaded_at DESC", ('%' + term.lower() + '%',))
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def db_get_file_by_token(token):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute("SELECT * FROM files WHERE token=?", (token,))
@@ -127,8 +143,29 @@ def db_get_file(token):
     return row
 
 # ============== HELPERS ==============
-def generate_token():
-    return uuid.uuid4().hex[:12]
+def generate_token(expiry_hours=None):
+    """Generate token, optionally with expiry. Format: token_expiry_timestamp"""
+    token = uuid.uuid4().hex[:12]
+    if expiry_hours:
+        from time import time
+        expiry = int(time()) + (expiry_hours * 3600)
+        return f"{token}_{expiry}"
+    return token
+
+def token_parse(token):
+    """Parse token and check expiry. Returns (clean_token, is_expired)."""
+    parts = token.split('_')
+    if len(parts) == 3:
+        # token_expiry_timestamp format
+        try:
+            expiry = int(parts[2])
+            from time import time
+            if int(time()) > expiry:
+                return token, True  # expired
+            return token, False  # valid (but with expiry marker - will work for download)
+        except ValueError:
+            pass
+    return token, False
 
 def format_size(bytes_size):
     for unit in ['B', 'KB', 'MB', 'GB']:
@@ -141,12 +178,12 @@ def format_size(bytes_size):
 def send_telegram(method, data=None, files=None):
     import requests
     import json
-    
+
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/{method}"
-    
+
     try:
         payload = dict(data) if data else {}
-        
+
         if files:
             # Multipart files
             file_data = {}
@@ -157,7 +194,7 @@ def send_telegram(method, data=None, files=None):
                 else:
                     filename, content_data = value if isinstance(value, tuple) else (str(value), b"")
                     file_data[key] = (filename, content_data)
-            
+
             resp = requests.post(url, data=payload, files=file_data, timeout=60)
             return resp.json()
         else:
@@ -172,10 +209,10 @@ def get_file_from_telegram(file_id):
     result = send_telegram("getFile", {"file_id": file_id})
     if not result or not result.get('ok'):
         return None
-    
+
     file_path = result['result']['file_path']
     file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
-    
+
     import urllib.request
     try:
         req = urllib.request.Request(file_url)
@@ -195,37 +232,37 @@ def handle_message(chat_id, user_id, text, file_data=None):
             "parse_mode": "Markdown"
         })
         return
-    
+
     # /list
     if text == '/list' or text == '/list@haasgrowfiles_bot':
         files = db_list_files()
         if not files:
             send_telegram("sendMessage", {"chat_id": chat_id, "text": "📂 Nenhum arquivo ainda."})
             return
-        
+
         msg_text = "📂 *Seus arquivos:*\n\n"
         for f in files[:20]:
             size = format_size(f[3] or 0)
             msg_text += f"📎 `{f[7]}` - {f[1]} ({size})\n"
-        
+
         if len(files) > 20:
             msg_text += f"\n_...e mais {len(files)-20} arquivos_"
-        
+
         send_telegram("sendMessage", {"chat_id": chat_id, "text": msg_text, "parse_mode": "Markdown"})
         return
-    
+
     # /delete
     if text.startswith('/delete '):
         token = text[8:].strip().split()[0]
-        file_row = db_get_file(token)
+        file_row = db_get_file_by_token(token)
         if not file_row:
             send_telegram("sendMessage", {"chat_id": chat_id, "text": "❌ Arquivo não encontrado."})
             return
-        
+
         db_delete_file(token)
         send_telegram("sendMessage", {"chat_id": chat_id, "text": "🗑️ Arquivo deletado!"})
         return
-    
+
     # /share
     if text.startswith('/share ') or text.startswith('/share@haasgrowfiles_bot '):
         token = text.split()[1] if ' ' in text else text[7:].strip().split()[0]
@@ -233,40 +270,40 @@ def handle_message(chat_id, user_id, text, file_data=None):
             token = text.split()[1] if ' ' in text else ''
         else:
             token = text[7:].strip().split()[0]
-        
-        file_row = db_get_file(token)
+
+        file_row = db_get_file_by_token(token)
         if not file_row:
             send_telegram("Message", {"chat_id": chat_id, "text": "❌ Arquivo não encontrado."})
             return
-        
+
         download_url = f"{BASE_URL}/f/{token}"
         send_telegram("sendMessage", {
             "chat_id": chat_id,
             "text": f"🔗 *Download:*\n{download_url}"
         })
         return
-    
+
     # /search
     if text.startswith('/search ') or text.startswith('/search@haasgrowfiles_bot '):
         term = text.split(None, 1)[1] if ' ' in text else ''
         if not term:
             send_telegram("sendMessage", {"chat_id": chat_id, "text": "Uso: /search [termo]"})
             return
-        
+
         files = db_list_files()
         matches = [f for f in files if term.lower() in f[1].lower()]
-        
+
         if not matches:
             send_telegram("sendMessage", {"chat_id": chat_id, "text": "🔍 Nenhum resultado."})
             return
-        
+
         msg_text = f"🔍 *Resultados ({len(matches)}):*\n\n"
         for f in matches[:10]:
             msg_text += f"📎 `{f[7]}` - {f[1]}\n"
-        
+
         send_telegram("sendMessage", {"chat_id": chat_id, "text": msg_text, "parse_mode": "Markdown"})
         return
-    
+
     # Handle document/video/photo - UPLOAD TO TELEGRAM
     if file_data:
         doc = file_data
@@ -274,17 +311,17 @@ def handle_message(chat_id, user_id, text, file_data=None):
         filename = doc.get('filename', 'file')
         size = doc.get('size', 0)
         mime_type = doc.get('mime_type', 'application/octet-stream')
-        
+
         if not file_id:
             send_telegram("sendMessage", {"chat_id": chat_id, "text": "❌ Erro ao processar arquivo."})
             return
-        
+
         token = generate_token()
         folder = '/'
-        
+
         # Save ONLY metadata, file stays on Telegram
         db_add_file(file_id, filename, folder, size, mime_type, token, user_id)
-        
+
         download_url = f"{BASE_URL}/f/{token}"
         send_telegram("sendMessage", {
             "chat_id": chat_id,
@@ -292,7 +329,7 @@ def handle_message(chat_id, user_id, text, file_data=None):
             "parse_mode": "Markdown"
         })
         return
-    
+
     # Unknown
     send_telegram("sendMessage", {
         "chat_id": chat_id,
@@ -303,20 +340,20 @@ def handle_message(chat_id, user_id, text, file_data=None):
 @app.route("/webhook", methods=['POST'])
 def telegram_webhook():
     update = request.get_json()
-    
+
     if 'message' not in update:
         return "ok"
-    
+
     msg = update['message']
     chat_id = str(msg['chat']['id'])
     user_id = str(msg['from']['id'])
-    
+
     # Only allow Paulo
     if user_id != ALLOWED_USER:
         return "ok"
-    
+
     text = msg.get('text', '')
-    
+
     # Handle document
     if 'document' in msg:
         doc = msg['document']
@@ -328,7 +365,7 @@ def telegram_webhook():
         }
         handle_message(chat_id, user_id, text, file_data)
         return "ok"
-    
+
     # Handle photo
     if 'photo' in msg:
         photo = msg['photo'][-1]  # Largest photo
@@ -343,7 +380,7 @@ def telegram_webhook():
         }
         handle_message(chat_id, user_id, text, file_data)
         return "ok"
-    
+
     # Handle video
     if 'video' in msg:
         vid = msg['video']
@@ -355,7 +392,7 @@ def telegram_webhook():
         }
         handle_message(chat_id, user_id, text, file_data)
         return "ok"
-    
+
     # Text only
     handle_message(chat_id, user_id, text, None)
     return "ok"
@@ -364,24 +401,37 @@ def telegram_webhook():
 @app.route("/f/<token>")
 def serve_file(token):
     """Download file by token - streams from Telegram"""
-    file_row = db_get_file(token)
+    # Check expiry if token has expiry format token_expiry_timestamp
+    original_token = token
+    parts = token.split('_')
+    if len(parts) == 3:
+        try:
+            expiry = int(parts[2])
+            from time import time
+            if int(time()) > expiry:
+                abort(410)
+            original_token = parts[0]  # strip expiry marker for DB lookup
+        except ValueError:
+            pass
+    
+    file_row = db_get_file_by_token(original_token)
     if not file_row:
         abort(404)
-    
+
     file_id = file_row[6]
     filename = file_row[1]
     mime_type = file_row[4] or 'application/octet-stream'
-    
+
     if not file_id:
         abort(404)
-    
+
     # Stream from Telegram
     result = get_file_from_telegram(file_id)
     if not result:
         abort(502)
-    
+
     data, size = result
-    
+
     response = Response(data, status=200)
     response.headers['Content-Type'] = mime_type
     response.headers['Content-Length'] = size or len(data)
@@ -400,13 +450,13 @@ def api_folders():
             parent = None
         if not name:
             return jsonify({"error": "Nome obrigatorio"}), 400
-        
+
         # Validate parent exists if provided
         if parent:
             parent_row = db_get_folder(parent)
             if not parent_row:
                 return jsonify({"error": "Pasta pai nao encontrada"}), 404
-        
+
         folder_id = db_create_folder(name, parent)
         return jsonify({"success": True, "id": folder_id, "name": name})
     else:
@@ -417,15 +467,23 @@ def api_folders():
         folders = db_list_folders(parent)
         return jsonify([{"id": f[0], "name": f[1], "parent_id": f[2]} for f in folders])
 
-@app.route("/files/api/folders/<folder_id>", methods=["GET", "DELETE"])
+@app.route("/files/api/folders/<folder_id>", methods=["GET", "PATCH", "DELETE"])
 def api_folder_detail(folder_id):
     if request.method == "DELETE":
-        # Check if folder is empty
         files = db_list_files(parent_folder=folder_id)
         subfolders = db_list_folders(folder_id)
         if files or subfolders:
             return jsonify({"error": "Pasta nao vazia"}), 400
         db_delete_folder(folder_id)
+        return jsonify({"success": True})
+    elif request.method == "PATCH":
+        data = request.json or {}
+        new_name = data.get("name", "").strip()
+        if not new_name:
+            return jsonify({"error": "Nome obrigatorio"}), 400
+        ok = db_rename_folder(folder_id, new_name)
+        if not ok:
+            return jsonify({"error": "Pasta nao encontrada"}), 404
         return jsonify({"success": True})
     else:
         folder = db_get_folder(folder_id)
@@ -438,14 +496,14 @@ def api_move_file(token):
     data = request.json or {}
     new_folder = data.get("folder")  # folder id or None for root
     new_parent = data.get("parent_folder")  # None = root
-    
+
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute("UPDATE files SET folder=?, parent_folder=? WHERE token=?", (new_folder or '/', new_parent, token))
     conn.commit()
     affected = c.rowcount
     conn.close()
-    
+
     if affected == 0:
         return jsonify({"error": "Arquivo nao encontrado"}), 404
     return jsonify({"success": True})
@@ -456,26 +514,95 @@ def api_rename_file(token):
     new_name = data.get("filename", "").strip()
     if not new_name:
         return jsonify({"error": "Nome obrigatorio"}), 400
-    
+
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute("UPDATE files SET filename=? WHERE token=?", (new_name, token))
     conn.commit()
     affected = c.rowcount
     conn.close()
-    
+
     if affected == 0:
         return jsonify({"error": "Arquivo nao encontrado"}), 404
     return jsonify({"success": True})
 
-# ============== WEB API ==============
-@app.route("/files/api/list")
-def api_list():
-    files = db_list_files()
+# ============== SEARCH API ==============
+@app.route("/files/api/search")
+def api_search():
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify([])
+    files = db_search_files(q)
     return jsonify([{
         "token": f[7],
         "filename": f[1],
         "folder": f[2],
+        "size": f[3],
+        "size_formatted": format_size(f[3] or 0),
+        "mime_type": f[4],
+        "uploaded_at": f[5]
+    } for f in files])
+
+# ============== SHARE LINK WITH EXPIRY ==============
+@app.route("/files/api/share/<token>", methods=["GET"])
+def api_share(token):
+    """Return share link URL, optionally with expiry baked into token. Does NOT modify DB."""
+    expiry_hours = request.args.get("exp", type=int)
+    # Strip expiry part if provided to look up original token
+    original_token = token.split('_')[0] if '_' in token else token
+    file_row = db_get_file_by_token(original_token)
+    if not file_row:
+        return jsonify({"error": "Arquivo nao encontrado"}), 404
+    if expiry_hours:
+        from time import time
+        expiry_ts = int(time()) + (expiry_hours * 3600)
+        share_token = f"{original_token}_{expiry_ts}"
+        return jsonify({"url": f"{BASE_URL}/f/{share_token}", "token": share_token})
+    return jsonify({"url": f"{BASE_URL}/f/{original_token}", "token": original_token})
+
+# ============== BATCH DOWNLOAD ==============
+@app.route("/files/api/batch-download", methods=["POST"])
+def api_batch_download():
+    data = request.json or {}
+    tokens = data.get("tokens", [])
+    if not tokens:
+        return jsonify({"error": "Nenhum token"}), 400
+
+    import zipfile
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for token in tokens:
+            file_row = db_get_file_by_token(token)
+            if not file_row:
+                continue
+            file_id = file_row[6]
+            filename = file_row[1]
+            if not file_id:
+                continue
+            result = get_file_from_telegram(file_id)
+            if not result:
+                continue
+            data_bytes, _ = result
+            zf.writestr(filename, data_bytes)
+
+    memory_file.seek(0)
+    return send_file(memory_file, mimetype='application/zip', as_attachment=True, download_name='files.zip')
+
+# ============== WEB API ==============
+@app.route("/files/api/list")
+def api_list():
+    folder = request.args.get('folder')
+    parent_folder = request.args.get('parent_folder')
+    if folder == '/':
+        folder = None
+    if parent_folder == '/':
+        parent_folder = None
+    files = db_list_files(folder=folder, parent_folder=parent_folder)
+    return jsonify([{
+        "token": f[7],
+        "filename": f[1],
+        "folder": f[2],
+        "parent_folder": f[9],
         "size": f[3],
         "size_formatted": format_size(f[3] or 0),
         "mime_type": f[4],
@@ -487,32 +614,32 @@ def api_upload():
     """Upload file via web interface - sends to Telegram"""
     if 'file' not in request.files:
         return jsonify({"error": "No file"}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "No filename"}), 400
-    
+
     file_content = file.read()
     filename = file.filename
     size = len(file_content)
     mime_type = file.content_type or 'application/octet-stream'
-    
+
     # Send to Telegram
     files = {'document': (filename, file_content, mime_type)}
     result = send_telegram("sendDocument", {"chat_id": ALLOWED_USER}, files=files)
-    
+
     if not result or not result.get('ok'):
         return jsonify({"error": "Failed to upload to Telegram"}), 500
-    
+
     doc = result['result'].get('document', {})
     file_id = doc.get('file_id')
-    
+
     if not file_id:
         return jsonify({"error": "No file_id from Telegram"}), 500
-    
+
     token = generate_token()
     db_add_file(file_id, filename, '/', None, size, mime_type, token, 'web')
-    
+
     # Notify via Telegram
     download_url = f"{BASE_URL}/f/{token}"
     send_telegram("sendMessage", {
@@ -520,7 +647,7 @@ def api_upload():
         "text": f"📤 *Upload via Web!*\n\n📎 {filename}\n💾 {format_size(size)}\n\n🔗 {download_url}",
         "parse_mode": "Markdown"
     })
-    
+
     return jsonify({
         "success": True,
         "token": token,
