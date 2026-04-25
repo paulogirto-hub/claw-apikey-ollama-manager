@@ -321,7 +321,7 @@ def handle_message(chat_id, user_id, text, file_data=None):
         folder = '/'
 
         # Save ONLY metadata, file stays on Telegram
-        db_add_file(file_id, filename, folder, size, mime_type, token, user_id)
+        db_add_file(file_id, filename, folder, None, size, mime_type, token, user_id)
 
         download_url = f"{BASE_URL}/f/{token}"
         send_telegram("sendMessage", {
