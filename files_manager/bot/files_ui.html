@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📁 Haasgrow Files</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <style>
         :root {
             --bg: #0a0a0a;
@@ -240,6 +239,7 @@
 </div>
 <div id="toast"></div>
 <script>
+if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 let currentFolder = null;
 let currentPath = [{ id: null, name: 'Início' }];
 let files = [];
@@ -716,3 +716,5 @@ document.addEventListener('dragover', e => { e.preventDefault(); });
 document.addEventListener('dragleave', e => { if (e.target === document.documentElement || !document.contains(e.relatedTarget)) { dropOverlay.classList.remove('active'); } });
 document.addEventListener('drop', e => { e.preventDefault(); dropOverlay.classList.remove('active'); if (e.dataTransfer.files.length) uploadFiles(Array.from(e.dataTransfer.files)); });
 
+</script>
+</html>
