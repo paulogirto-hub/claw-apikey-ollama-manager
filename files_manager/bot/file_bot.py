@@ -17,7 +17,7 @@ ALLOWED_USER = "7869694923"  # Paulo only
 # ====================================
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max upload
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max upload (Telegram limit)
 os.makedirs(STORAGE_DIR, exist_ok=True)
 
 # ============== DATABASE ==============
