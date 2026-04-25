@@ -17,6 +17,7 @@ ALLOWED_USER = "7869694923"  # Paulo only
 # ====================================
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max upload
 os.makedirs(STORAGE_DIR, exist_ok=True)
 
 # ============== DATABASE ==============
@@ -401,6 +402,19 @@ def telegram_webhook():
 @app.route("/f/<token>")
 def serve_file(token):
     """Download file by token - streams from Telegram"""
+    from time import time
+
+    # Rate limiting: 30 req/min per IP
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    now = int(time())
+    ip_key = f"{client_ip}:{now // 60}"
+    if not hasattr(app, '_rate_limits'):
+        app._rate_limits = {}
+    app._rate_limits[ip_key] = app._rate_limits.get(ip_key, 0) + 1
+    app._rate_limits = {k: v for k, v in app._rate_limits.items() if k.endswith(str(now // 60))}
+    if app._rate_limits.get(ip_key, 0) > 30:
+        abort(429)
+
     # Check expiry if token has expiry format token_expiry_timestamp
     original_token = token
     parts = token.split('_')
@@ -506,6 +520,12 @@ def api_move_file(token):
 
     if affected == 0:
         return jsonify({"error": "Arquivo nao encontrado"}), 404
+    return jsonify({"success": True})
+
+@app.route("/files/api/files/<token>", methods=["DELETE"])
+def api_delete_file(token):
+    """Delete a file"""
+    db_delete_file(token)
     return jsonify({"success": True})
 
 @app.route("/files/api/files/<token>/rename", methods=["POST"])
@@ -638,7 +658,8 @@ def api_upload():
         return jsonify({"error": "No file_id from Telegram"}), 500
 
     token = generate_token()
-    db_add_file(file_id, filename, '/', None, size, mime_type, token, 'web')
+    folder = request.form.get('folder', '/')
+    db_add_file(file_id, filename, folder, None, size, mime_type, token, 'web')
 
     # Notify via Telegram
     download_url = f"{BASE_URL}/f/{token}"

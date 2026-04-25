@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📁 Haasgrow Files</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <style>
         :root {
             --bg: #0a0a0a;
@@ -113,6 +115,26 @@
             .files-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
             .search-input { width: 140px; }
             .search-input:focus { width: 180px; }
+        }
+        #dropOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 9999; font-size: 2rem; color: white; pointer-events: none; font-weight: bold; }
+        #dropOverlay.active { display: flex; }
+        @media (max-width: 768px) {
+            .file-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important; gap: 10px !important; }
+            .file-card { padding: 10px !important; font-size: 12px !important; }
+            .file-name { font-size: 11px !important; word-break: break-all; }
+            .file-meta { font-size: 10px !important; }
+            .sidebar { display: none !important; }
+            .main-content { margin-left: 0 !important; }
+            .header { padding: 10px !important; flex-wrap: wrap; gap: 8px; }
+            #searchInput { width: 100% !important; order: 3; }
+            .actions-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; }
+            .modal { width: 95vw !important; max-width: 95vw !important; }
+            #previewModal img, #previewModal video, #previewModal audio { max-width: 100% !important; max-height: 70vh !important; }
+            .media-modal { width: 95vw !important; max-width: 95vw !important; }
+            .layout { flex-direction: column; }
+            .files-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+            .header { display: flex; flex-wrap: wrap; gap: 8px; }
+            .header h1 { font-size: 1rem; }
         }
     </style>
 </head>
@@ -242,7 +264,7 @@ function getMimeIcon(mime) {
 }
 function isPreviewable(mime) {
     if (!mime) return false;
-    return mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/');
+    return mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/') || mime === 'application/pdf';
 }
 function formatSize(bytes) {
     if (!bytes || bytes === 0) return '0 B';
@@ -427,14 +449,42 @@ function clearSelection() { selectedFiles.clear(); updateActionsBar(); renderGri
 async function previewMedia(token, mime) {
     const modal = document.getElementById('mediaModal');
     const content = document.getElementById('mediaContent');
-    if (mime.startsWith('image/')) {
+    if (mime === 'application/pdf') {
+        content.innerHTML = '<canvas id="pdfCanvas" style="max-width:100%;max-height:70vh;"></canvas><div style="text-align:center;margin-top:10px;"><button onclick="pdfPage--;renderPDF()">◀</button> <span id="pdfPageNum">1</span> / <span id="pdfTotalPages">1</span> <button onclick="pdfPage++;renderPDF()">▶</button></div>';
+        modal.classList.add('show');
+        window.pdfCurrentPage = 1;
+        window.pdfTotalPages = 1;
+        window.pdfToken = token;
+        const url = '/f/' + token;
+        pdfjsLib.getDocument(url).promise.then(function(pdf) {
+            window.pdfTotalPages = pdf.numPages;
+            window.pdfDoc = pdf;
+            document.getElementById('pdfTotalPages').textContent = pdf.numPages;
+            renderPDF();
+        }).catch(function(err) { showToast('❌ Erro ao carregar PDF'); console.error(err); });
+    } else if (mime.startsWith('image/')) {
         content.innerHTML = '<img src="/f/' + token + '">';
+        modal.classList.add('show');
     } else if (mime.startsWith('video/')) {
         content.innerHTML = '<video src="/f/' + token + '" controls></video>';
+        modal.classList.add('show');
     } else if (mime.startsWith('audio/')) {
         content.innerHTML = '<audio src="/f/' + token + '" controls></audio>';
+        modal.classList.add('show');
     }
-    modal.classList.add('show');
+}
+function renderPDF() {
+    if (!window.pdfDoc) return;
+    window.pdfDoc.getPage(window.pdfCurrentPage).then(function(page) {
+        var canvas = document.getElementById('pdfCanvas');
+        var ctx = canvas.getContext('2d');
+        var scale = 1.5;
+        var viewport = page.getViewport({scale: scale});
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        page.render({canvasContext: ctx, viewport: viewport});
+        document.getElementById('pdfPageNum').textContent = window.pdfCurrentPage;
+    });
 }
 function closeMediaModal() {
     document.getElementById('mediaModal').classList.remove('show');
@@ -632,6 +682,7 @@ async function uploadFiles(files) {
         const file = files[i];
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('folder', currentFolder || '/');
         try {
             await new Promise((resolve) => {
                 const xhr = new XMLHttpRequest();
@@ -657,6 +708,11 @@ async function uploadFiles(files) {
 }
 
 loadAll();
-</script>
-</body>
-</html>
+
+// Global drag & drop
+let dropOverlay = document.getElementById('dropOverlay');
+document.addEventListener('dragenter', e => { e.preventDefault(); if (e.dataTransfer.types.includes('Files')) { dropOverlay.classList.add('active'); } });
+document.addEventListener('dragover', e => { e.preventDefault(); });
+document.addEventListener('dragleave', e => { if (e.target === document.documentElement || !document.contains(e.relatedTarget)) { dropOverlay.classList.remove('active'); } });
+document.addEventListener('drop', e => { e.preventDefault(); dropOverlay.classList.remove('active'); if (e.dataTransfer.files.length) uploadFiles(Array.from(e.dataTransfer.files)); });
+
